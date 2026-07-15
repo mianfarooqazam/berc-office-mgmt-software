@@ -44,7 +44,7 @@ export async function GET() {
         .from("users")
         .select("*", { count: "exact", head: true })
         .eq("role_id", role.id);
-      return { ...toCamel(role), _count: { users: count || 0 } };
+      return { ...(toCamel(role) as Record<string, unknown>), _count: { users: count || 0 } };
     }),
   );
 

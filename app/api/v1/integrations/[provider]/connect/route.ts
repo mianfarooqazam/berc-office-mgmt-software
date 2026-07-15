@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin, isDemoMode } from "@/lib/supabase";
 import { toCamel } from "@/lib/mappers";
 import { error, json, requirePermission, writeAudit } from "@/lib/api";
 import {
@@ -10,6 +10,7 @@ import {
   microsoftOAuthConfigured,
   type IntegrationProviderId,
 } from "@/lib/integrations";
+import { setDemoIntegration } from "@/lib/demo-store";
 
 type Ctx = { params: Promise<{ provider: string }> };
 
@@ -22,7 +23,7 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!def) return error("Unknown provider", 404);
 
   const body = await req.json().catch(() => ({}));
-  const forceLocal = body.mode === "local" || body.mode === "demo";
+  const forceLocal = body.mode === "local" || body.mode === "demo" || isDemoMode();
 
   const oauthReady =
     def.oauth === "google" ? googleOAuthConfigured() : microsoftOAuthConfigured();
@@ -37,6 +38,13 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const accountEmail = body.accountEmail || user.email;
+
+  if (isDemoMode()) {
+    const integration = setDemoIntegration(provider, "CONNECTED", accountEmail);
+    await writeAudit(user.id, "CONNECT", "Integration", provider, { provider });
+    return json({ mode: "local", integration });
+  }
+
   const db = getSupabaseAdmin();
   const { data: integration, error: dbError } = await db
     .from("integrations")

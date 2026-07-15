@@ -52,14 +52,34 @@ export type DemoManagedUser = {
   createdAt: string;
 };
 
+export type DemoIntegration = {
+  provider: string;
+  status: "CONNECTED" | "DISCONNECTED";
+  accountEmail: string | null;
+  connectedAt: string | null;
+};
+
+export type DemoReportLink = {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  reportType: string | null;
+  driveUrl: string;
+  createdById: string | null;
+  createdAt: string;
+};
+
 type Store = {
   company: DemoCompany;
   holidays: DemoHoliday[];
   audit: DemoAudit[];
   users: DemoManagedUser[];
+  integrations: DemoIntegration[];
+  reportLinks: DemoReportLink[];
 };
 
-const g = globalThis as unknown as { __bercDemoStoreV3?: Store };
+const g = globalThis as unknown as { __bercDemoStoreV4?: Store };
 
 function seed(): Store {
   return {
@@ -106,12 +126,19 @@ function seed(): Store {
         createdAt: new Date().toISOString(),
       },
     ],
+    integrations: [
+      { provider: "GOOGLE_DRIVE", status: "DISCONNECTED", accountEmail: null, connectedAt: null },
+      { provider: "GOOGLE_MEET", status: "DISCONNECTED", accountEmail: null, connectedAt: null },
+      { provider: "MICROSOFT_TEAMS", status: "DISCONNECTED", accountEmail: null, connectedAt: null },
+      { provider: "MICROSOFT_OUTLOOK", status: "DISCONNECTED", accountEmail: null, connectedAt: null },
+    ],
+    reportLinks: [],
   };
 }
 
 export function getDemoStore(): Store {
-  if (!g.__bercDemoStoreV3) g.__bercDemoStoreV3 = seed();
-  return g.__bercDemoStoreV3;
+  if (!g.__bercDemoStoreV4) g.__bercDemoStoreV4 = seed();
+  return g.__bercDemoStoreV4;
 }
 
 export function findDemoUserByEmail(email: string) {
@@ -247,4 +274,64 @@ export function demoPermissionsCatalog() {
     name: p.name,
     module: p.module,
   }));
+}
+
+export function listDemoIntegrations() {
+  return getDemoStore().integrations;
+}
+
+export function setDemoIntegration(
+  provider: string,
+  status: "CONNECTED" | "DISCONNECTED",
+  accountEmail?: string | null,
+) {
+  const store = getDemoStore();
+  let row = store.integrations.find((i) => i.provider === provider);
+  if (!row) {
+    row = { provider, status: "DISCONNECTED", accountEmail: null, connectedAt: null };
+    store.integrations.push(row);
+  }
+  row.status = status;
+  row.accountEmail = status === "CONNECTED" ? accountEmail || "admin@berc.local" : null;
+  row.connectedAt = status === "CONNECTED" ? new Date().toISOString() : null;
+  return row;
+}
+
+export function isDemoDriveConnected() {
+  return listDemoIntegrations().some(
+    (i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED",
+  );
+}
+
+export function listDemoReportLinks() {
+  return [...getDemoStore().reportLinks].sort(
+    (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+  );
+}
+
+export function addDemoReportLink(input: {
+  title: string;
+  description?: string | null;
+  category: string;
+  reportType?: string | null;
+  driveUrl: string;
+  createdById?: string | null;
+}) {
+  const link: DemoReportLink = {
+    id: randomUUID(),
+    title: input.title,
+    description: input.description ?? null,
+    category: input.category,
+    reportType: input.reportType ?? null,
+    driveUrl: input.driveUrl,
+    createdById: input.createdById ?? null,
+    createdAt: new Date().toISOString(),
+  };
+  getDemoStore().reportLinks.unshift(link);
+  return link;
+}
+
+export function removeDemoReportLink(id: string) {
+  const store = getDemoStore();
+  store.reportLinks = store.reportLinks.filter((l) => l.id !== id);
 }

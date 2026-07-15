@@ -334,6 +334,19 @@ create table if not exists audit_logs (
   created_at timestamptz not null default now()
 );
 
+-- Office reports hub: Drive-linked report files/folders
+create table if not exists report_links (
+  id text primary key default gen_random_uuid()::text,
+  title text not null,
+  description text,
+  category text not null default 'general',
+  report_type text,
+  drive_url text not null,
+  drive_file_id text,
+  created_by_id text references users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
 -- Service-role access from Next.js API; disable RLS for app tables
 alter table roles disable row level security;
 alter table permissions disable row level security;
@@ -369,3 +382,4 @@ alter table holidays disable row level security;
 alter table office_events disable row level security;
 alter table integrations disable row level security;
 alter table audit_logs disable row level security;
+alter table report_links disable row level security;

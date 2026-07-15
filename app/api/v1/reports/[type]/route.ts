@@ -186,6 +186,48 @@ async function getRows(type: string) {
         ]),
       };
     }
+    case "announcements": {
+      const { data, error: dbError } = await db
+        .from("announcements")
+        .select("*, author:users(*, employee:employees(*))")
+        .order("published_at", { ascending: false });
+      if (dbError) throw new Error(dbError.message);
+      const rows = toCamel<
+        {
+          title: string;
+          pinned: boolean;
+          publishedAt: string;
+          author: { employee?: { fullName?: string } | null; email: string };
+        }[]
+      >(data || []);
+      return {
+        headers: ["Title", "Pinned", "Published", "Author"],
+        data: rows.map((r) => [
+          r.title,
+          r.pinned ? "Yes" : "No",
+          r.publishedAt,
+          r.author.employee?.fullName || r.author.email,
+        ]),
+      };
+    }
+    case "documents": {
+      const { data, error: dbError } = await db
+        .from("documents")
+        .select("*, folder:document_folders(*)")
+        .order("name");
+      if (dbError) throw new Error(dbError.message);
+      const rows = toCamel<
+        {
+          name: string;
+          folder?: { name?: string } | null;
+          createdAt?: string;
+        }[]
+      >(data || []);
+      return {
+        headers: ["Name", "Folder", "Created"],
+        data: rows.map((r) => [r.name, r.folder?.name || "", r.createdAt || ""]),
+      };
+    }
     default:
       return null;
   }

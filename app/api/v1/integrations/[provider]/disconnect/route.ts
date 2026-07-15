@@ -1,7 +1,8 @@
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin, isDemoMode } from "@/lib/supabase";
 import { toCamel } from "@/lib/mappers";
 import { error, json, requirePermission, writeAudit } from "@/lib/api";
 import { INTEGRATION_PROVIDERS } from "@/lib/integrations";
+import { setDemoIntegration } from "@/lib/demo-store";
 
 type Ctx = { params: Promise<{ provider: string }> };
 
@@ -12,6 +13,12 @@ export async function POST(_req: Request, ctx: Ctx) {
   const { provider } = await ctx.params;
   if (!INTEGRATION_PROVIDERS.some((p) => p.id === provider)) {
     return error("Unknown provider", 404);
+  }
+
+  if (isDemoMode()) {
+    setDemoIntegration(provider, "DISCONNECTED");
+    await writeAudit(user.id, "DISCONNECT", "Integration", provider, { provider });
+    return json({ ok: true });
   }
 
   const db = getSupabaseAdmin();
