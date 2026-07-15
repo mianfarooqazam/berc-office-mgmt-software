@@ -20,16 +20,16 @@ export async function POST(req: Request) {
 
   if (isDemoMode()) {
     const account = findDemoAccount(email);
-    if (!account) return error("Invalid email or password", 401);
+    if (!account || !account.isActive) return error("Invalid email or password", 401);
     const ok = await verifyPassword(password, account.passwordHash);
     if (!ok) return error("Invalid email or password", 401);
 
     const token = await createToken({
       userId: account.id,
       email: account.email,
-      roleId: account.roleId,
+      roleId: account.roleName === "Admin" ? "demo-role-admin" : "demo-role-employee",
       roleName: account.roleName,
-      employeeId: account.employeeId,
+      employeeId: account.employee.id,
     });
     await setSessionCookie(token);
 
@@ -38,8 +38,8 @@ export async function POST(req: Request) {
         id: account.id,
         email: account.email,
         role: account.roleName,
-        employeeId: account.employeeId,
-        fullName: account.fullName,
+        employeeId: account.employee.id,
+        fullName: account.employee.fullName,
       },
       demo: true,
     });

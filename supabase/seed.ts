@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
-import { PERMISSIONS, ROLE_PERMISSIONS } from "../lib/permissions";
+import { DEFAULT_EMPLOYEE_VIEWS, PERMISSIONS, ROLE_PERMISSIONS } from "../lib/permissions";
 import { INTEGRATION_PROVIDERS } from "../lib/integrations";
 
 async function main() {
@@ -18,7 +18,7 @@ async function main() {
     id: "default",
     name: "BERC",
     legal_name: "BERC Office",
-    email: "hr@berc.local",
+    email: "admin@berc.local",
     phone: "+92-300-0000000",
     address: "Lahore, Pakistan",
     primary_color: "#0F766E",
@@ -41,19 +41,28 @@ async function main() {
     if (!roleId) {
       const { data: created } = await db
         .from("roles")
-        .insert({ name: roleName, description: `${roleName} role`, is_system: true })
+        .insert({
+          name: roleName,
+          description:
+            roleName === "Admin"
+              ? "Full system authority"
+              : "Login role — views assigned per user by Admin",
+          is_system: true,
+        })
         .select("id")
         .single();
       roleId = created!.id;
     }
 
     await db.from("role_permissions").delete().eq("role_id", roleId);
-    await db.from("role_permissions").insert(
-      codes.map((code) => ({
-        role_id: roleId!,
-        permission_id: byCode[code],
-      })),
-    );
+    if (codes.length) {
+      await db.from("role_permissions").insert(
+        codes.map((code) => ({
+          role_id: roleId!,
+          permission_id: byCode[code],
+        })),
+      );
+    }
   }
 
   for (const provider of INTEGRATION_PROVIDERS) {
@@ -63,12 +72,16 @@ async function main() {
     );
   }
 
-  const password = process.env.SEED_ADMIN_PASSWORD || "Admin@123";
-  const passwordHash = await bcrypt.hash(password, 10);
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@123";
+  const adminHash = await bcrypt.hash(adminPassword, 10);
   const year = new Date().getFullYear();
 
   const { data: roles } = await db.from("roles").select("id, name");
-  const roleId = (name: string) => roles!.find((r) => r.name === name)!.id;
+  const roleId = (name: string) => {
+    const found = roles!.find((r) => r.name === name);
+    if (!found) throw new Error(`Role not found: ${name}`);
+    return found.id;
+  };
 
   async function ensureDept(name: string, description: string) {
     const { data: existing } = await db.from("departments").select("id").eq("name", name).maybeSingle();
@@ -81,100 +94,52 @@ async function main() {
   const hrId = await ensureDept("Human Resources", "People operations");
   const opsId = await ensureDept("Operations", "Office operations");
 
-  async function ensureUserEmployee(opts: {
-    email: string;
-    roleName: string;
-    employeeId: string;
-    fullName: string;
-    designation: string;
-    departmentId?: string;
-  }) {
-    let { data: user } = await db.from("users").select("id").eq("email", opts.email).maybeSingle();
-    if (!user) {
-      const { data: created } = await db
-        .from("users")
-        .insert({
-          email: opts.email,
-          password_hash: passwordHash,
-          role_id: roleId(opts.roleName),
-        })
-        .select("id")
-        .single();
-      user = created!;
-    }
-
-    let { data: employee } = await db
-      .from("employees")
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL || "admin@berc.local").toLowerCase();
+  let { data: adminUser } = await db.from("users").select("id").eq("email", adminEmail).maybeSingle();
+  if (!adminUser) {
+    const { data: created } = await db
+      .from("users")
+      .insert({
+        email: adminEmail,
+        password_hash: adminHash,
+        role_id: roleId("Admin"),
+      })
       .select("id")
-      .eq("employee_id", opts.employeeId)
-      .maybeSingle();
-
-    if (!employee) {
-      const { data: created } = await db
-        .from("employees")
-        .insert({
-          employee_id: opts.employeeId,
-          full_name: opts.fullName,
-          email: opts.email,
-          phone: "+92-300-1111111",
-          designation: opts.designation,
-          department_id: opts.departmentId || null,
-          joining_date: new Date(`${year}-01-15`).toISOString(),
-          status: "ACTIVE",
-          user_id: user.id,
-          cnic: "00000-0000000-0",
-          address: "Lahore",
-          emergency_contact: "+92-300-2222222",
-          bank_details: JSON.stringify({ bank: "HBL", account: "0123456789" }),
-        })
-        .select("id")
-        .single();
-      employee = created!;
-    }
-
-    return { userId: user.id, employeeId: employee.id };
+      .single();
+    adminUser = created!;
+  } else {
+    await db
+      .from("users")
+      .update({ password_hash: adminHash, role_id: roleId("Admin"), is_active: true })
+      .eq("id", adminUser.id);
   }
 
-  const admin = await ensureUserEmployee({
-    email: process.env.SEED_ADMIN_EMAIL || "admin@berc.local",
-    roleName: "Administrator",
-    employeeId: "BERC-001",
-    fullName: "System Administrator",
-    designation: "Administrator",
-    departmentId: opsId,
-  });
-
-  const hrUser = await ensureUserEmployee({
-    email: "hr@berc.local",
-    roleName: "Office Manager",
-    employeeId: "BERC-002",
-    fullName: "Ayesha Khan",
-    designation: "HR Manager",
-    departmentId: hrId,
-  });
-
-  const mgr = await ensureUserEmployee({
-    email: "manager@berc.local",
-    roleName: "Department Manager",
-    employeeId: "BERC-003",
-    fullName: "Hassan Ali",
-    designation: "Engineering Manager",
-    departmentId: engId,
-  });
-
-  await db.from("departments").update({ manager_id: mgr.employeeId }).eq("id", engId);
-  await db.from("departments").update({ manager_id: hrUser.employeeId }).eq("id", hrId);
-
-  for (let i = 4; i <= 12; i++) {
-    await ensureUserEmployee({
-      email: `employee${i}@berc.local`,
-      roleName: "Employee",
-      employeeId: `BERC-${String(i).padStart(3, "0")}`,
-      fullName: `Employee ${i}`,
-      designation: i % 2 === 0 ? "Software Engineer" : "Operations Associate",
-      departmentId: i % 2 === 0 ? engId : opsId,
-    });
+  let { data: adminEmp } = await db
+    .from("employees")
+    .select("id")
+    .eq("employee_id", "BERC-001")
+    .maybeSingle();
+  if (!adminEmp) {
+    const { data: created } = await db
+      .from("employees")
+      .insert({
+        employee_id: "BERC-001",
+        full_name: "BERC Admin",
+        email: adminEmail,
+        phone: "+92-300-0000001",
+        designation: "Administrator",
+        department_id: opsId,
+        joining_date: new Date(`${year}-01-15`).toISOString(),
+        status: "ACTIVE",
+        user_id: adminUser.id,
+      })
+      .select("id")
+      .single();
+    adminEmp = created!;
   }
+
+  await db.from("departments").update({ manager_id: adminEmp.id }).eq("id", engId);
+  await db.from("departments").update({ manager_id: adminEmp.id }).eq("id", hrId);
 
   const holidays = [
     { name: "Pakistan Day", date: `${year}-03-23` },
@@ -186,7 +151,6 @@ async function main() {
       .from("holidays")
       .select("id")
       .eq("name", h.name)
-      .eq("date", new Date(h.date).toISOString())
       .maybeSingle();
     if (!existing) {
       await db.from("holidays").insert({ name: h.name, date: new Date(h.date).toISOString() });
@@ -199,47 +163,16 @@ async function main() {
   if (!announcementCount) {
     await db.from("announcements").insert({
       title: "Welcome to BERC Office Management",
-      body: "Tasks and Reports are the focus. Connect Google Drive, Meet, and Teams from Integrations.",
+      body: "Admin creates users from Settings → Users & access and chooses what each person can see.",
       pinned: true,
-      author_id: admin.userId,
+      author_id: adminUser.id,
     });
   }
 
-  const { count: taskCount } = await db.from("tasks").select("*", { count: "exact", head: true });
-  if (!taskCount) {
-    const { data: t1 } = await db
-      .from("tasks")
-      .insert({
-        title: "Prepare weekly operations report",
-        description: "Compile task progress and asset status for leadership.",
-        priority: "HIGH",
-        status: "IN_PROGRESS",
-        due_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(),
-        created_by_id: admin.userId,
-      })
-      .select("id")
-      .single();
-    await db.from("task_assignees").insert({ task_id: t1!.id, employee_id: mgr.employeeId });
-    await db.from("task_activities").insert({ task_id: t1!.id, message: "Task seeded for demo" });
-
-    const { data: t2 } = await db
-      .from("tasks")
-      .insert({
-        title: "Review onboarding checklist",
-        description: "Ensure new hire documents are complete.",
-        priority: "MEDIUM",
-        status: "TODO",
-        due_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
-        created_by_id: hrUser.userId,
-      })
-      .select("id")
-      .single();
-    await db.from("task_assignees").insert({ task_id: t2!.id, employee_id: hrUser.employeeId });
-    await db.from("task_activities").insert({ task_id: t2!.id, message: "Task seeded for demo" });
-  }
-
   console.log("Supabase seed complete.");
-  console.log(`Admin: ${process.env.SEED_ADMIN_EMAIL || "admin@berc.local"} / ${password}`);
+  console.log(`Admin only: ${adminEmail} / ${adminPassword}`);
+  console.log("Create more users from Settings → Users & access.");
+  console.log("Default employee views:", DEFAULT_EMPLOYEE_VIEWS.join(", "));
 }
 
 main().catch((e) => {

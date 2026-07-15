@@ -35,6 +35,13 @@ create table if not exists users (
   updated_at timestamptz not null default now()
 );
 
+-- Per-user views assigned by Admin (Employee role has no fixed permissions)
+create table if not exists user_permissions (
+  user_id text not null references users(id) on delete cascade,
+  permission_id text not null references permissions(id) on delete cascade,
+  primary key (user_id, permission_id)
+);
+
 create table if not exists password_reset_tokens (
   id text primary key default gen_random_uuid()::text,
   token text not null unique,
@@ -332,6 +339,7 @@ alter table roles disable row level security;
 alter table permissions disable row level security;
 alter table role_permissions disable row level security;
 alter table users disable row level security;
+alter table user_permissions disable row level security;
 alter table password_reset_tokens disable row level security;
 alter table company_settings disable row level security;
 alter table employees disable row level security;

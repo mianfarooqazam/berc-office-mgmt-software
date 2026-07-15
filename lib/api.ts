@@ -53,7 +53,11 @@ export async function writeAudit(
   entityId?: string,
   metadata?: unknown,
 ) {
-  if (isDemoMode()) return;
+  if (isDemoMode()) {
+    const { pushAudit } = await import("./demo-store");
+    pushAudit(userId ?? null, action, entity, entityId);
+    return;
+  }
   const db = getSupabaseAdmin();
   await db.from("audit_logs").insert({
     user_id: userId ?? null,

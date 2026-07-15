@@ -1,11 +1,16 @@
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin, isDemoMode } from "@/lib/supabase";
 import { toCamel, toSnake } from "@/lib/mappers";
 import { error, json, parseBody, requirePermission, writeAudit } from "@/lib/api";
+import { getDemoCompany, updateDemoCompany } from "@/lib/demo-store";
 import { z } from "zod";
 
 export async function GET() {
   const { error: authError } = await requirePermission("settings.read");
   if (authError) return authError;
+
+  if (isDemoMode()) {
+    return json(getDemoCompany());
+  }
 
   const db = getSupabaseAdmin();
   const { data, error: dbError } = await db
@@ -36,6 +41,12 @@ export async function PATCH(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = parseBody(schema, body);
   if (parsed.error || !parsed.data) return parsed.error!;
+
+  if (isDemoMode()) {
+    const updated = updateDemoCompany(parsed.data);
+    await writeAudit(user.id, "UPDATE", "CompanySettings", "default");
+    return json(updated);
+  }
 
   const db = getSupabaseAdmin();
   const updates = toSnake(parsed.data as Record<string, unknown>);

@@ -24,69 +24,73 @@ export const PERMISSIONS = [
   { code: "integrations.write", name: "Manage integrations", module: "integrations" },
   { code: "settings.read", name: "View settings", module: "settings" },
   { code: "settings.write", name: "Manage settings", module: "settings" },
-  { code: "roles.write", name: "Manage roles", module: "settings" },
+  { code: "roles.write", name: "Manage users & access", module: "settings" },
   { code: "audit.read", name: "View audit logs", module: "settings" },
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number]["code"];
 
+/** Only Admin is a system role. Employees get per-user view permissions set by Admin. */
 export const ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
-  Administrator: PERMISSIONS.map((p) => p.code),
-  "Office Manager": [
-    "dashboard.read",
-    "employees.read",
-    "employees.write",
-    "departments.read",
-    "departments.write",
-    "tasks.read",
-    "tasks.write",
-    "meetings.read",
-    "meetings.write",
-    "assets.read",
-    "assets.write",
-    "documents.read",
-    "documents.write",
-    "announcements.read",
-    "announcements.write",
-    "messages.read",
-    "messages.write",
-    "calendar.read",
-    "calendar.write",
-    "reports.read",
-    "integrations.read",
-    "integrations.write",
-    "settings.read",
-  ],
-  "Department Manager": [
-    "dashboard.read",
-    "employees.read",
-    "departments.read",
-    "tasks.read",
-    "tasks.write",
-    "meetings.read",
-    "meetings.write",
-    "assets.read",
-    "documents.read",
-    "announcements.read",
-    "messages.read",
-    "messages.write",
-    "calendar.read",
-    "reports.read",
-    "integrations.read",
-  ],
-  Employee: [
-    "dashboard.read",
-    "employees.read",
-    "departments.read",
-    "tasks.read",
-    "meetings.read",
-    "assets.read",
-    "documents.read",
-    "announcements.read",
-    "messages.read",
-    "messages.write",
-    "calendar.read",
-    "reports.read",
-    "integrations.read",
-  ],
+  Admin: PERMISSIONS.map((p) => p.code),
+  Employee: [],
 };
+
+/** Default views Admin can assign when creating a new employee login. */
+export const DEFAULT_EMPLOYEE_VIEWS: PermissionCode[] = [
+  "dashboard.read",
+  "tasks.read",
+  "tasks.write",
+  "meetings.read",
+  "announcements.read",
+  "messages.read",
+  "messages.write",
+  "calendar.read",
+  "employees.read",
+  "departments.read",
+  "documents.read",
+  "assets.read",
+];
+
+/** Grouped modules for the Admin “what can they see” UI. */
+export const VIEW_MODULES = [
+  { module: "dashboard", label: "Dashboard", codes: ["dashboard.read"] as PermissionCode[] },
+  { module: "tasks", label: "Tasks", codes: ["tasks.read", "tasks.write"] as PermissionCode[] },
+  { module: "reports", label: "Reports", codes: ["reports.read"] as PermissionCode[] },
+  { module: "meetings", label: "Meetings", codes: ["meetings.read", "meetings.write"] as PermissionCode[] },
+  { module: "announcements", label: "Announcements", codes: ["announcements.read", "announcements.write"] as PermissionCode[] },
+  { module: "messages", label: "Messages", codes: ["messages.read", "messages.write"] as PermissionCode[] },
+  { module: "calendar", label: "Calendar", codes: ["calendar.read", "calendar.write"] as PermissionCode[] },
+  { module: "employees", label: "Employees", codes: ["employees.read", "employees.write", "employees.delete"] as PermissionCode[] },
+  { module: "departments", label: "Departments", codes: ["departments.read", "departments.write"] as PermissionCode[] },
+  { module: "assets", label: "Assets", codes: ["assets.read", "assets.write"] as PermissionCode[] },
+  { module: "documents", label: "Documents", codes: ["documents.read", "documents.write"] as PermissionCode[] },
+  { module: "integrations", label: "Integrations", codes: ["integrations.read", "integrations.write"] as PermissionCode[] },
+  {
+    module: "settings",
+    label: "Settings",
+    codes: ["settings.read", "settings.write", "roles.write", "audit.read"] as PermissionCode[],
+  },
+];
+
+export const ROUTE_PERMISSIONS: Record<string, PermissionCode | null> = {
+  "/dashboard": "dashboard.read",
+  "/tasks": "tasks.read",
+  "/reports": "reports.read",
+  "/meetings": "meetings.read",
+  "/announcements": "announcements.read",
+  "/messages": "messages.read",
+  "/calendar": "calendar.read",
+  "/notifications": null,
+  "/employees": "employees.read",
+  "/departments": "departments.read",
+  "/assets": "assets.read",
+  "/documents": "documents.read",
+  "/integrations": "integrations.read",
+  "/settings": "settings.read",
+  "/ai": "dashboard.read",
+};
+
+export function isAdminRole(name?: string | null) {
+  return name === "Admin" || name === "Administrator";
+}

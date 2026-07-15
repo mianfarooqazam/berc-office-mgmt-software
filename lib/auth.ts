@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from "./supabase";
 import { toCamel } from "./mappers";
 import type { PermissionCode } from "./permissions";
 import { getDemoUserById, isDemoMode } from "./demo";
+import { isAdminRole } from "./permissions";
 
 const COOKIE_NAME = "berc_session";
 const JWT_SECRET = () => new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret");
@@ -159,7 +160,8 @@ export async function getCurrentUser(): Promise<AppUser | null> {
           permission:permissions(*)
         )
       ),
-      employee:employees(*)
+      employee:employees(*),
+      user_permissions:user_permissions(permission:permissions(*))
     `,
     )
     .eq("id", session.userId)
@@ -168,12 +170,34 @@ export async function getCurrentUser(): Promise<AppUser | null> {
   if (error || !data) return null;
   const user = mapUser(data as Record<string, unknown>);
   if (!user.isActive) return null;
+
+  // Non-admin users: Admin-assigned views override empty role permissions
+  if (!isAdminRole(user.role.name)) {
+    const raw = data as Record<string, unknown>;
+    const ups = (raw.user_permissions || raw.userPermissions || []) as Array<{
+      permission?: { id?: string; code?: string; name?: string; module?: string };
+    }>;
+    if (ups.length) {
+      user.role.permissions = ups
+        .map((row) => row.permission)
+        .filter(Boolean)
+        .map((p) => ({
+          permission: {
+            id: String(p!.id || p!.code || ""),
+            code: String(p!.code || ""),
+            name: String(p!.name || ""),
+            module: String(p!.module || ""),
+          },
+        }));
+    }
+  }
+
   return user;
 }
 
 export async function userHasPermission(user: AppUser, code: PermissionCode | PermissionCode[]) {
+  if (isAdminRole(user.role.name)) return true;
   const codes = user.role.permissions.map((rp) => rp.permission.code);
-  if (user.role.name === "Administrator") return true;
   const needed = Array.isArray(code) ? code : [code];
   return needed.every((c) => codes.includes(c));
 }

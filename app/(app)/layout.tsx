@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { getSupabaseAdmin, isDemoMode } from "@/lib/supabase";
+import { getDemoCompany } from "@/lib/demo-store";
 import { toCamel } from "@/lib/mappers";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,7 +16,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
   let unread = 0;
 
-  if (!isDemoMode()) {
+  if (isDemoMode()) {
+    company = getDemoCompany();
+  } else {
     const db = getSupabaseAdmin();
     const [companyRes, unreadRes] = await Promise.all([
       db.from("company_settings").select("*").eq("id", "default").maybeSingle(),
@@ -41,6 +44,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <AppShell
       companyName={company?.name || "BERC"}
       userName={user.employee?.fullName || user.email}
+      roleName={user.role.name}
+      permissions={user.role.permissions.map((p) => p.permission.code)}
       unread={unread}
     >
       <style>{`

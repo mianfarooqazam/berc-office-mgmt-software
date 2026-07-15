@@ -1,5 +1,6 @@
-import { PERMISSIONS } from "./permissions";
 import type { AppUser } from "./auth";
+import { PERMISSIONS } from "./permissions";
+import { findDemoUserByEmail, findDemoUserById } from "./demo-store";
 
 /** True when Supabase is not configured (placeholders) or DEMO_MODE=true. */
 export function isDemoMode() {
@@ -14,95 +15,43 @@ export function isDemoMode() {
   );
 }
 
-// bcrypt hash for Admin@123
-const DEMO_PASSWORD_HASH =
-  "$2b$10$UPu50mPe7orHO0ZshZoy1e7X9PNEObRJ.8gvB72vrgtq1xVd2nuoa";
-
-export type DemoAccount = {
-  id: string;
-  email: string;
-  passwordHash: string;
-  roleId: string;
-  roleName: string;
-  employeeId: string;
-  employeeCode: string;
-  fullName: string;
-};
-
-export const DEMO_ACCOUNTS: DemoAccount[] = [
-  {
-    id: "demo-user-admin",
-    email: "admin@berc.local",
-    passwordHash: DEMO_PASSWORD_HASH,
-    roleId: "demo-role-admin",
-    roleName: "Administrator",
-    employeeId: "demo-emp-admin",
-    employeeCode: "BERC-001",
-    fullName: "BERC Admin",
-  },
-  {
-    id: "demo-user-hr",
-    email: "hr@berc.local",
-    passwordHash: DEMO_PASSWORD_HASH,
-    roleId: "demo-role-hr",
-    roleName: "Office Manager",
-    employeeId: "demo-emp-hr",
-    employeeCode: "BERC-002",
-    fullName: "HR Manager",
-  },
-  {
-    id: "demo-user-manager",
-    email: "manager@berc.local",
-    passwordHash: DEMO_PASSWORD_HASH,
-    roleId: "demo-role-mgr",
-    roleName: "Department Manager",
-    employeeId: "demo-emp-mgr",
-    employeeCode: "BERC-003",
-    fullName: "Dept Manager",
-  },
-  {
-    id: "demo-user-employee",
-    email: "employee1@berc.local",
-    passwordHash: DEMO_PASSWORD_HASH,
-    roleId: "demo-role-emp",
-    roleName: "Employee",
-    employeeId: "demo-emp-1",
-    employeeCode: "BERC-004",
-    fullName: "Demo Employee",
-  },
-];
-
 export function findDemoAccount(email: string) {
-  return DEMO_ACCOUNTS.find((a) => a.email === email.toLowerCase()) ?? null;
+  return findDemoUserByEmail(email);
 }
 
-export function demoUserFromAccount(account: DemoAccount): AppUser {
+export function demoUserFromAccount(user: NonNullable<ReturnType<typeof findDemoUserById>>): AppUser {
+  const codes =
+    user.roleName === "Admin"
+      ? PERMISSIONS.map((p) => p.code)
+      : user.permissionCodes;
+
   return {
-    id: account.id,
-    email: account.email,
-    passwordHash: account.passwordHash,
-    isActive: true,
-    roleId: account.roleId,
+    id: user.id,
+    email: user.email,
+    passwordHash: user.passwordHash,
+    isActive: user.isActive,
+    roleId: user.roleName === "Admin" ? "demo-role-admin" : "demo-role-employee",
     role: {
-      id: account.roleId,
-      name: account.roleName,
-      permissions: PERMISSIONS.map((p) => ({
+      id: user.roleName === "Admin" ? "demo-role-admin" : "demo-role-employee",
+      name: user.roleName,
+      permissions: PERMISSIONS.filter((p) => codes.includes(p.code)).map((p) => ({
         permission: { id: p.code, code: p.code, name: p.name, module: p.module },
       })),
     },
     employee: {
-      id: account.employeeId,
-      employeeId: account.employeeCode,
-      fullName: account.fullName,
-      departmentId: "demo-dept-1",
-      profilePhoto: null,
+      id: user.employee.id,
+      employeeId: user.employee.employeeId,
+      fullName: user.employee.fullName,
+      departmentId: user.employee.departmentId,
+      profilePhoto: user.employee.profilePhoto,
     },
   };
 }
 
 export function getDemoUserById(userId: string): AppUser | null {
-  const account = DEMO_ACCOUNTS.find((a) => a.id === userId);
-  return account ? demoUserFromAccount(account) : null;
+  const user = findDemoUserById(userId);
+  if (!user || !user.isActive) return null;
+  return demoUserFromAccount(user);
 }
 
 /** Minimal thenable query builder so pages don't crash without Supabase. */

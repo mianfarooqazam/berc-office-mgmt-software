@@ -9,10 +9,12 @@ import { api } from "@/lib/api-client";
 export function Topbar({
   onMenu,
   userName,
+  roleName,
   unread = 0,
 }: {
   onMenu: () => void;
   userName?: string;
+  roleName?: string;
   unread?: number;
 }) {
   const { theme, setTheme } = useTheme();
@@ -74,7 +76,12 @@ export function Topbar({
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--brand)]/12 text-[11px] font-bold text-[var(--brand)] ring-1 ring-[var(--brand)]/15">
             {initials}
           </span>
-          <span className="max-w-[150px] truncate text-sm font-semibold">{userName}</span>
+          <div className="min-w-0 leading-tight">
+            <p className="max-w-[150px] truncate text-sm font-semibold">{userName}</p>
+            {roleName ? (
+              <p className="truncate text-[11px] font-medium text-[var(--muted-fg)]">{roleName}</p>
+            ) : null}
+          </div>
         </div>
 
         <button

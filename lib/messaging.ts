@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { getSupabaseAdmin, isDemoMode } from "./supabase";
 import { toCamel } from "./mappers";
-import { DEMO_ACCOUNTS } from "./demo";
+import { listDemoUsers, findDemoUserById } from "./demo-store";
 import { notifyUser } from "./notifications";
 
 export type MessageContact = {
@@ -69,56 +69,22 @@ type DemoConversation = {
 };
 
 const globalStore = globalThis as unknown as {
-  __bercMessages?: DemoConversation[];
+  __bercMessagesV3?: DemoConversation[];
 };
 
 function demoStore(): DemoConversation[] {
-  if (!globalStore.__bercMessages) {
-    const now = new Date();
-    const earlier = new Date(now.getTime() - 1000 * 60 * 45);
-    const convId = "demo-conv-admin-hr";
-    globalStore.__bercMessages = [
-      {
-        id: convId,
-        subject: null,
-        createdById: "demo-user-admin",
-        createdAt: earlier.toISOString(),
-        updatedAt: now.toISOString(),
-        participantIds: ["demo-user-admin", "demo-user-hr"],
-        lastReadAt: {
-          "demo-user-admin": now.toISOString(),
-          "demo-user-hr": earlier.toISOString(),
-        },
-        messages: [
-          {
-            id: "demo-msg-1",
-            conversationId: convId,
-            senderId: "demo-user-admin",
-            body: "Hi — can you send the weekly task summary when ready?",
-            createdAt: earlier.toISOString(),
-            attachments: [],
-          },
-          {
-            id: "demo-msg-2",
-            conversationId: convId,
-            senderId: "demo-user-hr",
-            body: "Sure, I'll share it this afternoon.",
-            createdAt: now.toISOString(),
-            attachments: [],
-          },
-        ],
-      },
-    ];
+  if (!globalStore.__bercMessagesV3) {
+    globalStore.__bercMessagesV3 = [];
   }
-  return globalStore.__bercMessages;
+  return globalStore.__bercMessagesV3;
 }
 
 function contactFromDemo(userId: string): MessageContact {
-  const a = DEMO_ACCOUNTS.find((x) => x.id === userId);
+  const a = findDemoUserById(userId);
   return {
     id: userId,
     email: a?.email || userId,
-    fullName: a?.fullName || a?.email || userId,
+    fullName: a?.employee.fullName || a?.email || userId,
   };
 }
 
@@ -195,11 +161,13 @@ async function contactFromDb(userId: string): Promise<MessageContact> {
 
 export async function listMessageContacts(userId: string): Promise<MessageContact[]> {
   if (isDemoMode()) {
-    return DEMO_ACCOUNTS.filter((a) => a.id !== userId).map((a) => ({
-      id: a.id,
-      email: a.email,
-      fullName: a.fullName,
-    }));
+    return listDemoUsers()
+      .filter((a) => a.id !== userId)
+      .map((a) => ({
+        id: a.id,
+        email: a.email,
+        fullName: a.employee.fullName,
+      }));
   }
 
   const db = getSupabaseAdmin();

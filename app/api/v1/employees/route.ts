@@ -1,7 +1,8 @@
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin, isDemoMode } from "@/lib/supabase";
 import { toCamel } from "@/lib/mappers";
 import { error, json, parseBody, requirePermission, writeAudit } from "@/lib/api";
 import { hashPassword } from "@/lib/auth";
+import { listDemoUsers } from "@/lib/demo-store";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -30,6 +31,31 @@ export async function GET(req: Request) {
   const q = searchParams.get("q")?.trim();
   const departmentId = searchParams.get("departmentId");
   const status = searchParams.get("status");
+
+  if (isDemoMode()) {
+    let rows = listDemoUsers().map((u) => ({
+      id: u.employee.id,
+      employeeId: u.employee.employeeId,
+      fullName: u.employee.fullName,
+      email: u.employee.email,
+      phone: u.employee.phone,
+      designation: u.employee.designation,
+      status: u.employee.status,
+      department: { id: "demo-dept-1", name: "Operations" },
+      user: { id: u.id, role: { name: u.roleName } },
+    }));
+    if (q) {
+      const needle = q.toLowerCase();
+      rows = rows.filter(
+        (r) =>
+          r.fullName.toLowerCase().includes(needle) ||
+          r.email.toLowerCase().includes(needle) ||
+          r.employeeId.toLowerCase().includes(needle),
+      );
+    }
+    if (status) rows = rows.filter((r) => r.status === status);
+    return json(rows);
+  }
 
   const db = getSupabaseAdmin();
   let query = db
