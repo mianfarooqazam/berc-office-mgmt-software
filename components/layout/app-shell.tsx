@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { cn } from "@/lib/utils";
 
 export function AppShell({
   children,
@@ -20,6 +22,8 @@ export function AppShell({
   unread?: number;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const isCalendar = pathname === "/calendar";
 
   return (
     <div className="flex h-dvh overflow-hidden">
@@ -37,8 +41,22 @@ export function AppShell({
           roleName={roleName}
           unread={unread}
         />
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-7 md:py-8">
-          <div className="page-enter mx-auto w-full max-w-7xl">{children}</div>
+        <main
+          className={cn(
+            "min-h-0 flex-1",
+            isCalendar
+              ? "overflow-hidden p-0"
+              : "overflow-y-auto px-4 py-6 md:px-7 md:py-8",
+          )}
+        >
+          <div
+            className={cn(
+              "page-enter mx-auto w-full",
+              isCalendar ? "h-full max-w-none" : "max-w-7xl",
+            )}
+          >
+            {children}
+          </div>
         </main>
       </div>
     </div>
