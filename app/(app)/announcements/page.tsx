@@ -62,28 +62,37 @@ export default function AnnouncementsPage() {
                 <CardDescription>Share updates with everyone</CardDescription>
               </div>
             </CardHeader>
-            <form onSubmit={create} className="space-y-3">
-              <Input
-                placeholder="Title"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-              />
-              <Textarea
-                placeholder="Message"
-                value={form.body}
-                onChange={(e) => setForm({ ...form, body: e.target.value })}
-                required
-              />
-              <label className="flex items-center gap-2 text-sm">
+            <form onSubmit={create} className="space-y-3.5">
+              <div>
+                <label className="ui-label">Title</label>
+                <Input
+                  placeholder="Announcement title"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="ui-label">Message</label>
+                <Textarea
+                  placeholder="Write the update…"
+                  value={form.body}
+                  onChange={(e) => setForm({ ...form, body: e.target.value })}
+                  required
+                />
+              </div>
+              <label className="flex items-center gap-2.5 text-sm font-medium">
                 <input
                   type="checkbox"
+                  className="h-4 w-4 rounded border-[var(--border)] accent-[var(--brand)]"
                   checked={form.pinned}
                   onChange={(e) => setForm({ ...form, pinned: e.target.checked })}
                 />
                 Pin to top
               </label>
-              <Button type="submit">Publish</Button>
+              <Button type="submit" className="w-full">
+                Publish
+              </Button>
             </form>
           </Card>
         ) : null}
@@ -92,15 +101,17 @@ export default function AnnouncementsPage() {
           {items.map((a) => (
             <Card key={a.id} hover>
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-[15px] font-semibold tracking-tight">{a.title}</h3>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-[family-name:var(--font-display)] text-base font-semibold tracking-tight">
+                      {a.title}
+                    </h3>
                     {a.pinned ? <Badge tone="info">Pinned</Badge> : null}
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted-fg)]">
+                  <p className="mt-2.5 whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted-fg)]">
                     {a.body}
                   </p>
-                  <p className="mt-3 text-xs text-[var(--muted-fg)]">
+                  <p className="mt-4 text-xs font-medium text-[var(--muted-fg)]">
                     {a.author.employee?.fullName || a.author.email} · {formatDateTime(a.publishedAt)}
                   </p>
                 </div>

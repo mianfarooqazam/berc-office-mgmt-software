@@ -166,7 +166,7 @@ export default async function DashboardPage() {
                 <Link
                   key={t.id}
                   href={`/tasks/${t.id}`}
-                  className="flex items-start justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 transition hover:border-[var(--brand)]/25 hover:bg-[var(--brand)]/5"
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-3 transition hover:border-[var(--brand)]/30 hover:bg-[var(--brand)]/5 hover:shadow-sm"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{t.title}</p>
@@ -198,7 +198,7 @@ export default async function DashboardPage() {
                 <Link
                   key={a.href}
                   href={a.href}
-                  className="group flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-sm transition hover:border-[var(--brand)]/30 hover:bg-[var(--brand)]/5"
+                  className="group flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-3 text-sm transition hover:border-[var(--brand)]/30 hover:bg-[var(--brand)]/5 hover:shadow-sm"
                 >
                   <span className="flex items-center gap-2.5 font-medium">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--surface)] text-[var(--brand)] shadow-sm">

@@ -75,44 +75,44 @@ export function Sidebar({
     <>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] transition lg:hidden",
+          "fixed inset-0 z-40 bg-[#0c1222]/45 backdrop-blur-[3px] transition lg:hidden",
           open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
         onClick={onClose}
       />
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur transition-transform lg:static lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-[var(--border)] bg-[color-mix(in_oklab,var(--surface)_92%,transparent)] shadow-[var(--shadow-sm)] backdrop-blur-xl transition-transform lg:static lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-[var(--border)] px-4">
-          <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onClose}>
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand)] text-sm font-bold text-[var(--brand-fg)] shadow-sm">
+        <div className="flex h-[68px] items-center justify-between border-b border-[var(--border)] px-4">
+          <Link href="/dashboard" className="flex items-center gap-3" onClick={onClose}>
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--brand)] font-[family-name:var(--font-display)] text-base font-bold text-[var(--brand-fg)] shadow-[0_1px_0_rgb(255_255_255/0.2)_inset,var(--shadow-sm)]">
               {companyName.slice(0, 1)}
             </span>
             <div className="leading-tight">
               <p className="font-[family-name:var(--font-display)] text-[15px] font-semibold tracking-tight">
                 {companyName}
               </p>
-              <p className="text-[11px] text-[var(--muted-fg)]">Office Management</p>
+              <p className="text-[11px] font-medium text-[var(--muted-fg)]">Office Management</p>
             </div>
           </Link>
           <button
-            className="rounded-lg p-1.5 text-[var(--muted-fg)] hover:bg-[var(--muted)] lg:hidden"
+            className="rounded-xl p-2 text-[var(--muted-fg)] hover:bg-[var(--muted)] lg:hidden"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted-fg)]">
+              <p className="mb-2 px-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted-fg)]">
                 {group.label}
               </p>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {group.items.map((item) => {
                   const active =
                     pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -123,17 +123,29 @@ export function Sidebar({
                       href={item.href}
                       onClick={onClose}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition",
+                        "group flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition duration-150",
                         active
-                          ? "bg-[var(--brand)]/12 font-medium text-[var(--brand)] shadow-sm ring-1 ring-[var(--brand)]/15"
+                          ? "bg-[var(--brand)] font-semibold text-[var(--brand-fg)] shadow-[var(--shadow-sm)]"
                           : "text-[var(--muted-fg)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]",
-                        item.emphasis && !active && "font-medium text-[var(--foreground)]",
+                        item.emphasis && !active && "font-semibold text-[var(--foreground)]",
                       )}
                     >
-                      <Icon className="h-4 w-4 shrink-0 opacity-90" />
+                      <Icon
+                        className={cn(
+                          "h-4 w-4 shrink-0",
+                          active ? "opacity-100" : "opacity-80 group-hover:opacity-100",
+                        )}
+                      />
                       <span className="flex-1">{item.label}</span>
                       {item.emphasis ? (
-                        <span className="rounded-md bg-[var(--brand)]/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand)]">
+                        <span
+                          className={cn(
+                            "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                            active
+                              ? "bg-white/20 text-[var(--brand-fg)]"
+                              : "bg-[var(--brand)]/10 text-[var(--brand)]",
+                          )}
+                        >
                           Key
                         </span>
                       ) : null}
@@ -146,8 +158,11 @@ export function Sidebar({
         </nav>
 
         <div className="border-t border-[var(--border)] p-3">
-          <div className="rounded-xl bg-[var(--surface-2)] px-3 py-3 text-xs text-[var(--muted-fg)]">
-            Tasks & reports first · Connect Drive, Meet & Teams
+          <div className="rounded-2xl border border-[var(--border)] bg-[linear-gradient(160deg,color-mix(in_oklab,var(--brand)_8%,var(--surface-2)),var(--surface-2))] px-3.5 py-3.5">
+            <p className="text-xs font-semibold text-[var(--foreground)]">Operations focus</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[var(--muted-fg)]">
+              Tasks & reports first · Connect Drive, Meet & Teams
+            </p>
           </div>
         </div>
       </aside>

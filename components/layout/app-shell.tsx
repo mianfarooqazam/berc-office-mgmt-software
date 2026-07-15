@@ -22,7 +22,7 @@ export function AppShell({
       <Sidebar open={open} onClose={() => setOpen(false)} companyName={companyName} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenu={() => setOpen(true)} userName={userName} unread={unread} />
-        <main className="flex-1 px-4 py-5 md:px-6 md:py-7">
+        <main className="flex-1 px-4 py-6 md:px-7 md:py-8">
           <div className="page-enter mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>

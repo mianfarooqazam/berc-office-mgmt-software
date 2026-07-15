@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { DM_Sans, Instrument_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const sans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
 });
 
-const instrument = Instrument_Sans({
+const display = Outfit({
   variable: "--font-display",
   subsets: ["latin"],
 });
@@ -20,7 +20,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${dmSans.variable} ${instrument.variable} h-full`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${sans.variable} ${display.variable} h-full`}
+    >
       <body className="min-h-full antialiased">
         <Providers>{children}</Providers>
       </body>

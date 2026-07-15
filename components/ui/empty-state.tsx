@@ -14,13 +14,17 @@ export function EmptyState({
   return (
     <div className="ui-empty">
       {Icon ? (
-        <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--muted)] text-[var(--muted-fg)]">
+        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--brand)] shadow-sm">
           <Icon className="h-5 w-5" />
         </div>
       ) : null}
-      <p className="font-medium text-[var(--foreground)]">{title}</p>
-      {description ? <p className="max-w-sm text-[var(--muted-fg)]">{description}</p> : null}
-      {action ? <div className="mt-2">{action}</div> : null}
+      <p className="font-[family-name:var(--font-display)] text-base font-semibold text-[var(--foreground)]">
+        {title}
+      </p>
+      {description ? (
+        <p className="max-w-sm text-sm leading-relaxed text-[var(--muted-fg)]">{description}</p>
+      ) : null}
+      {action ? <div className="mt-3">{action}</div> : null}
     </div>
   );
 }

@@ -39,6 +39,15 @@ function titleFor(c: Conversation) {
   return "Conversation";
 }
 
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 function MessagesPageInner() {
   const searchParams = useSearchParams();
   const [meId, setMeId] = useState("");
@@ -151,26 +160,32 @@ function MessagesPageInner() {
             </div>
           </CardHeader>
           <form onSubmit={startChat} className="space-y-3">
-            <Select
-              value={recipientId}
-              onChange={(e) => setRecipientId(e.target.value)}
-              required
-            >
-              <option value="" disabled>
-                Select recipient
-              </option>
-              {contacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.fullName} ({c.email})
+            <div>
+              <label className="ui-label">Recipient</label>
+              <Select
+                value={recipientId}
+                onChange={(e) => setRecipientId(e.target.value)}
+                required
+              >
+                <option value="" disabled>
+                  Select recipient
                 </option>
-              ))}
-            </Select>
-            <Textarea
-              placeholder="Write your first message (optional)"
-              value={firstMessage}
-              onChange={(e) => setFirstMessage(e.target.value)}
-              rows={3}
-            />
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.fullName} ({c.email})
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="ui-label">Message</label>
+              <Textarea
+                placeholder="Write your first message (optional)"
+                value={firstMessage}
+                onChange={(e) => setFirstMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={sending || !recipientId}>
                 Start chat
@@ -183,15 +198,17 @@ function MessagesPageInner() {
         </Card>
       ) : null}
 
-      <div className="grid min-h-[560px] gap-4 lg:grid-cols-[320px_1fr]">
-        <Card className="overflow-hidden p-0">
-          <div className="border-b border-[var(--border)] px-4 py-3">
-            <p className="text-sm font-semibold">Inbox</p>
-            <p className="text-xs text-[var(--muted-fg)]">{conversations.length} conversations</p>
+      <div className="grid min-h-[620px] overflow-hidden rounded-[20px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)] lg:grid-cols-[340px_1fr]">
+        <div className="border-b border-[var(--border)] lg:border-b-0 lg:border-r">
+          <div className="border-b border-[var(--border)] bg-[var(--surface-2)]/70 px-5 py-4">
+            <p className="font-[family-name:var(--font-display)] text-sm font-semibold">Inbox</p>
+            <p className="mt-0.5 text-xs text-[var(--muted-fg)]">
+              {conversations.length} conversation{conversations.length === 1 ? "" : "s"}
+            </p>
           </div>
           <div className="max-h-[560px] overflow-y-auto">
             {conversations.length === 0 ? (
-              <div className="p-4">
+              <div className="p-5">
                 <EmptyState
                   icon={MessageSquare}
                   title="No messages yet"
@@ -201,38 +218,42 @@ function MessagesPageInner() {
             ) : (
               conversations.map((c) => {
                 const selected = c.id === activeId;
+                const name = titleFor(c);
                 return (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => openConversation(c.id).catch(console.error)}
                     className={cn(
-                      "flex w-full flex-col gap-1 border-b border-[var(--border)] px-4 py-3 text-left transition",
+                      "flex w-full items-start gap-3 border-b border-[var(--border)] px-4 py-3.5 text-left transition",
                       selected
-                        ? "bg-[color-mix(in_oklab,var(--brand)_10%,transparent)]"
-                        : "hover:bg-[var(--muted)]/50",
+                        ? "bg-[color-mix(in_oklab,var(--brand)_9%,transparent)]"
+                        : "hover:bg-[var(--surface-2)]",
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold">{titleFor(c)}</span>
-                      {c.unreadCount > 0 ? (
-                        <Badge tone="info">{c.unreadCount}</Badge>
-                      ) : null}
+                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand)]/12 text-xs font-bold text-[var(--brand)] ring-1 ring-[var(--brand)]/12">
+                      {initials(name)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold">{name}</span>
+                        {c.unreadCount > 0 ? <Badge tone="info">{c.unreadCount}</Badge> : null}
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-[var(--muted-fg)]">
+                        {c.lastMessage?.body || "No messages yet"}
+                      </p>
+                      <p className="mt-1 text-[11px] text-[var(--muted-fg)]">
+                        {formatDateTime(c.lastMessage?.createdAt || c.updatedAt)}
+                      </p>
                     </div>
-                    <p className="truncate text-xs text-[var(--muted-fg)]">
-                      {c.lastMessage?.body || "No messages yet"}
-                    </p>
-                    <p className="text-[11px] text-[var(--muted-fg)]">
-                      {formatDateTime(c.lastMessage?.createdAt || c.updatedAt)}
-                    </p>
                   </button>
                 );
               })
             )}
           </div>
-        </Card>
+        </div>
 
-        <Card className="flex min-h-[560px] flex-col overflow-hidden p-0">
+        <div className="flex min-h-[560px] flex-col bg-[linear-gradient(180deg,color-mix(in_oklab,var(--surface-2)_65%,transparent),transparent_140px)]">
           {!active ? (
             <div className="flex flex-1 items-center justify-center p-6">
               <EmptyState
@@ -243,14 +264,21 @@ function MessagesPageInner() {
             </div>
           ) : (
             <>
-              <div className="border-b border-[var(--border)] px-4 py-3">
-                <p className="text-sm font-semibold">{titleFor(active)}</p>
-                <p className="text-xs text-[var(--muted-fg)]">
-                  {active.participants.map((p) => p.fullName).join(", ") || "Direct message"}
-                </p>
+              <div className="flex items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)]/80 px-5 py-4 backdrop-blur">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--brand)] text-xs font-bold text-[var(--brand-fg)]">
+                  {initials(titleFor(active))}
+                </span>
+                <div>
+                  <p className="font-[family-name:var(--font-display)] text-sm font-semibold">
+                    {titleFor(active)}
+                  </p>
+                  <p className="text-xs text-[var(--muted-fg)]">
+                    {active.participants.map((p) => p.fullName).join(", ") || "Direct message"}
+                  </p>
+                </div>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5 md:px-6">
                 {messages.map((m) => {
                   const mine = m.senderId === meId;
                   return (
@@ -260,21 +288,21 @@ function MessagesPageInner() {
                     >
                       <div
                         className={cn(
-                          "max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
+                          "max-w-[78%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm",
                           mine
-                            ? "bg-[var(--brand)] text-[var(--brand-fg)]"
-                            : "bg-[var(--muted)] text-[var(--fg)]",
+                            ? "rounded-br-md bg-[var(--brand)] text-[var(--brand-fg)]"
+                            : "rounded-bl-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]",
                         )}
                       >
                         {!mine ? (
-                          <p className="mb-1 text-[11px] font-medium opacity-80">
+                          <p className="mb-1 text-[11px] font-semibold text-[var(--brand)]">
                             {m.sender.fullName}
                           </p>
                         ) : null}
                         <p className="whitespace-pre-wrap">{m.body}</p>
                         <p
                           className={cn(
-                            "mt-1 text-[10px]",
+                            "mt-1.5 text-[10px] font-medium",
                             mine ? "text-[var(--brand-fg)]/70" : "text-[var(--muted-fg)]",
                           )}
                         >
@@ -289,14 +317,14 @@ function MessagesPageInner() {
 
               <form
                 onSubmit={send}
-                className="flex items-end gap-2 border-t border-[var(--border)] p-3"
+                className="flex items-end gap-2 border-t border-[var(--border)] bg-[var(--surface)] p-3 md:p-4"
               >
                 <Textarea
                   placeholder="Type a message…"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   rows={2}
-                  className="min-h-[44px] flex-1 resize-none"
+                  className="min-h-[48px] flex-1 resize-none"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -306,13 +334,13 @@ function MessagesPageInner() {
                     }
                   }}
                 />
-                <Button type="submit" disabled={sending || !draft.trim()} className="shrink-0">
+                <Button type="submit" disabled={sending || !draft.trim()} className="h-11 w-11 shrink-0 p-0">
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
             </>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

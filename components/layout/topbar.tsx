@@ -31,9 +31,9 @@ export function Topbar({
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)]/80 px-4 backdrop-blur-md md:px-6">
+    <header className="sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-[var(--border)] bg-[color-mix(in_oklab,var(--surface)_82%,transparent)] px-4 backdrop-blur-xl md:px-7">
       <button
-        className="rounded-xl p-2 text-[var(--muted-fg)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] lg:hidden"
+        className="rounded-xl p-2.5 text-[var(--muted-fg)] transition hover:bg-[var(--muted)] hover:text-[var(--foreground)] lg:hidden"
         onClick={onMenu}
         aria-label="Open menu"
       >
@@ -41,26 +41,28 @@ export function Topbar({
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-[var(--foreground)]">Workspace</p>
+        <p className="truncate font-[family-name:var(--font-display)] text-sm font-semibold tracking-tight text-[var(--foreground)]">
+          Workspace
+        </p>
         <p className="truncate text-xs text-[var(--muted-fg)]">Daily operations at a glance</p>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <Link
           href="/notifications"
-          className="relative rounded-xl p-2 text-[var(--muted-fg)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+          className="relative rounded-xl p-2.5 text-[var(--muted-fg)] transition hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />
           {unread > 0 ? (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+            <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-bold text-white shadow-sm">
               {unread > 9 ? "9+" : unread}
             </span>
           ) : null}
         </Link>
 
         <button
-          className="rounded-xl p-2 text-[var(--muted-fg)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+          className="rounded-xl p-2.5 text-[var(--muted-fg)] transition hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           aria-label="Toggle theme"
         >
@@ -68,15 +70,15 @@ export function Topbar({
           <Moon className="hidden h-4 w-4 dark:block" />
         </button>
 
-        <div className="ml-1 hidden items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-1.5 pl-1.5 pr-3 sm:flex">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--brand)]/15 text-[11px] font-semibold text-[var(--brand)]">
+        <div className="ml-1.5 hidden items-center gap-2.5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-1.5 pr-3 shadow-sm sm:flex">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--brand)]/12 text-[11px] font-bold text-[var(--brand)] ring-1 ring-[var(--brand)]/15">
             {initials}
           </span>
-          <span className="max-w-[140px] truncate text-sm font-medium">{userName}</span>
+          <span className="max-w-[150px] truncate text-sm font-semibold">{userName}</span>
         </div>
 
         <button
-          className="rounded-xl p-2 text-[var(--muted-fg)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+          className="rounded-xl p-2.5 text-[var(--muted-fg)] transition hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
           onClick={logout}
           aria-label="Logout"
         >

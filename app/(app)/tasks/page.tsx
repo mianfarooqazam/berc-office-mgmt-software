@@ -71,49 +71,68 @@ export default function TasksPage() {
               <CardDescription>Assign owners and set priority</CardDescription>
             </div>
           </CardHeader>
-          <form onSubmit={create} className="space-y-3">
-            <Input
-              placeholder="Title"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
-            />
-            <Textarea
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-            <Select
-              value={form.priority}
-              onChange={(e) => setForm({ ...form, priority: e.target.value })}
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-            </Select>
-            <Input
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-            />
-            <Select
-              multiple
-              className="h-28"
-              value={form.assigneeIds}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  assigneeIds: Array.from(e.target.selectedOptions).map((o) => o.value),
-                })
-              }
-            >
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.fullName}
-                </option>
-              ))}
-            </Select>
-            <Button type="submit">Create</Button>
+          <form onSubmit={create} className="space-y-3.5">
+            <div>
+              <label className="ui-label">Title</label>
+              <Input
+                placeholder="What needs to be done?"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="ui-label">Description</label>
+              <Textarea
+                placeholder="Add context or acceptance notes"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="ui-label">Priority</label>
+                <Select
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                </Select>
+              </div>
+              <div>
+                <label className="ui-label">Due date</label>
+                <Input
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="ui-label">Assignees</label>
+              <Select
+                multiple
+                className="h-28"
+                value={form.assigneeIds}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    assigneeIds: Array.from(e.target.selectedOptions).map((o) => o.value),
+                  })
+                }
+              >
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.fullName}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button type="submit" className="w-full">
+              Create task
+            </Button>
           </form>
         </Card>
 
@@ -138,11 +157,11 @@ export default function TasksPage() {
                 <Link
                   key={t.id}
                   href={`/tasks/${t.id}`}
-                  className="flex items-start justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3 transition hover:border-[var(--brand)]/25 hover:bg-[var(--brand)]/5"
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-3.5 transition hover:border-[var(--brand)]/30 hover:bg-[var(--brand)]/5 hover:shadow-sm"
                 >
-                  <div>
-                    <p className="text-sm font-medium">{t.title}</p>
-                    <p className="mt-0.5 text-xs text-[var(--muted-fg)]">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold tracking-tight">{t.title}</p>
+                    <p className="mt-1 text-xs text-[var(--muted-fg)]">
                       Due {formatDate(t.dueDate)} ·{" "}
                       {t.assignees.map((a) => a.employee.fullName).join(", ") || "Unassigned"}
                     </p>
