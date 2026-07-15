@@ -33,7 +33,7 @@ export function Topbar({
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-[var(--border)] bg-[color-mix(in_oklab,var(--surface)_82%,transparent)] px-4 backdrop-blur-xl md:px-7">
+    <header className="z-30 flex h-[68px] shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[color-mix(in_oklab,var(--surface)_82%,transparent)] px-4 backdrop-blur-xl md:px-7">
       <button
         className="rounded-xl p-2.5 text-[var(--muted-fg)] transition hover:bg-[var(--muted)] hover:text-[var(--foreground)] lg:hidden"
         onClick={onMenu}
