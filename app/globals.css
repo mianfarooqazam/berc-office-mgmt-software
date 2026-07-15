@@ -1,26 +1,137 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f5f7;
+  --foreground: #0f1419;
+  --surface: #ffffff;
+  --surface-2: #f8fafb;
+  --muted: #eef1f4;
+  --muted-fg: #5c6670;
+  --border: #e2e7ec;
+  --border-strong: #d0d7de;
+  --brand: #0f766e;
+  --brand-fg: #ffffff;
+  --accent: #0369a1;
+  --surface-elevated: #ffffff;
+  --ring: color-mix(in oklab, var(--brand) 35%, transparent);
+  --shadow-sm: 0 1px 2px rgb(15 20 25 / 0.04), 0 1px 1px rgb(15 20 25 / 0.03);
+  --shadow-md: 0 4px 16px rgb(15 20 25 / 0.06), 0 1px 3px rgb(15 20 25 / 0.04);
+  --radius: 14px;
+}
+
+.dark {
+  --background: #0b0f12;
+  --foreground: #eef2f5;
+  --surface: #12171c;
+  --surface-2: #171d23;
+  --muted: #1c242c;
+  --muted-fg: #95a1ad;
+  --border: #243039;
+  --border-strong: #33404b;
+  --brand: #2dd4bf;
+  --brand-fg: #042f2e;
+  --accent: #38bdf8;
+  --ring: color-mix(in oklab, var(--brand) 40%, transparent);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 0.35);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 500px at 10% -10%, color-mix(in oklab, var(--brand) 8%, transparent), transparent 55%),
+    radial-gradient(900px 400px at 100% 0%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 50%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--border);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--brand) 28%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-fg) 35%, transparent);
+  border-radius: 999px;
+}
+
+.ui-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-table {
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.ui-table thead {
+  background: var(--surface-2);
+  color: var(--muted-fg);
+}
+
+.ui-table th {
+  padding: 0.75rem 1rem;
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ui-table td {
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.ui-table tbody tr {
+  transition: background 120ms ease;
+}
+
+.ui-table tbody tr:hover {
+  background: color-mix(in oklab, var(--muted) 55%, transparent);
+}
+
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--muted-fg);
+  font-size: 0.875rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeIn 220ms ease;
 }
