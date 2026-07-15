@@ -10,6 +10,21 @@ export type MessageContact = {
   fullName: string;
 };
 
+export type MessageAttachment = {
+  id: string;
+  name: string;
+  filePath: string;
+  mimeType: string | null;
+  size: number | null;
+};
+
+export type MessageAttachmentInput = {
+  name: string;
+  filePath: string;
+  mimeType: string;
+  size: number;
+};
+
 export type ChatMessage = {
   id: string;
   conversationId: string;
@@ -17,6 +32,7 @@ export type ChatMessage = {
   body: string;
   createdAt: string;
   sender: { id: string; email: string; fullName: string };
+  attachments: MessageAttachment[];
 };
 
 export type ConversationSummary = {
@@ -38,6 +54,7 @@ type DemoMessage = {
   senderId: string;
   body: string;
   createdAt: string;
+  attachments: MessageAttachment[];
 };
 
 type DemoConversation = {
@@ -79,6 +96,7 @@ function demoStore(): DemoConversation[] {
             senderId: "demo-user-admin",
             body: "Hi — can you send the weekly task summary when ready?",
             createdAt: earlier.toISOString(),
+            attachments: [],
           },
           {
             id: "demo-msg-2",
@@ -86,6 +104,7 @@ function demoStore(): DemoConversation[] {
             senderId: "demo-user-hr",
             body: "Sure, I'll share it this afternoon.",
             createdAt: now.toISOString(),
+            attachments: [],
           },
         ],
       },
@@ -112,7 +131,20 @@ function mapDemoMessage(m: DemoMessage): ChatMessage {
     body: m.body,
     createdAt: m.createdAt,
     sender: { id: sender.id, email: sender.email, fullName: sender.fullName },
+    attachments: m.attachments || [],
   };
+}
+
+export function messagePreviewText(message: {
+  body?: string | null;
+  attachments?: Array<{ name: string }> | null;
+}) {
+  const text = message.body?.trim();
+  if (text) return text;
+  const attachments = message.attachments || [];
+  if (attachments.length === 1) return `📎 ${attachments[0].name}`;
+  if (attachments.length > 1) return `📎 ${attachments.length} attachments`;
+  return "Message";
 }
 
 function summarizeDemo(c: DemoConversation, userId: string): ConversationSummary {
@@ -127,10 +159,15 @@ function summarizeDemo(c: DemoConversation, userId: string): ConversationSummary
     subject: c.subject,
     updatedAt: c.updatedAt,
     unreadCount,
-    participants: c.participantIds
+      participants: c.participantIds
       .filter((id) => id !== userId)
       .map(contactFromDemo),
-    lastMessage: last ? mapDemoMessage(last) : null,
+    lastMessage: last
+      ? {
+          ...mapDemoMessage(last),
+          body: messagePreviewText(last),
+        }
+      : null,
   };
 }
 
@@ -214,7 +251,7 @@ export async function listConversations(userId: string): Promise<ConversationSum
       `
       *,
       participants:conversation_participants(user_id, user:users(id, email, employee:employees(full_name))),
-      messages(*)
+      messages(*, attachments:message_attachments(*))
     `,
     )
     .in("id", ids)
@@ -240,6 +277,7 @@ export async function listConversations(userId: string): Promise<ConversationSum
         senderId: string;
         body: string;
         createdAt: string;
+        attachments?: MessageAttachment[];
       }>;
     }>(raw);
 
@@ -266,13 +304,15 @@ export async function listConversations(userId: string): Promise<ConversationSum
     let lastMessage: ChatMessage | null = null;
     if (last) {
       const sender = await contactFromDb(last.senderId);
+      const attachments = last.attachments || [];
       lastMessage = {
         id: last.id,
         conversationId: last.conversationId || c.id,
         senderId: last.senderId,
-        body: last.body,
+        body: messagePreviewText({ body: last.body, attachments }),
         createdAt: last.createdAt,
         sender: { id: sender.id, email: sender.email, fullName: sender.fullName },
+        attachments,
       };
     }
 
@@ -328,7 +368,7 @@ export async function getConversation(
       `
       *,
       participants:conversation_participants(user_id, user:users(id, email, employee:employees(full_name))),
-      messages(*)
+      messages(*, attachments:message_attachments(*))
     `,
     )
     .eq("id", conversationId)
@@ -354,6 +394,7 @@ export async function getConversation(
       senderId: string;
       body: string;
       createdAt: string;
+      attachments?: MessageAttachment[];
     }>;
   }>(raw);
 
@@ -371,6 +412,7 @@ export async function getConversation(
         body: m.body,
         createdAt: m.createdAt,
         sender: { id: sender.id, email: sender.email, fullName: sender.fullName },
+        attachments: m.attachments || [],
       };
     }),
   );
@@ -438,6 +480,7 @@ export async function startConversation(
   participantUserIds: string[],
   body?: string,
   subject?: string | null,
+  attachments: MessageAttachmentInput[] = [],
 ): Promise<ConversationDetail> {
   const others = [...new Set(participantUserIds.filter((id) => id && id !== userId))];
   if (!others.length) throw new Error("Select at least one recipient");
@@ -445,7 +488,9 @@ export async function startConversation(
   if (others.length === 1) {
     const existing = await findExistingDm(userId, others[0]);
     if (existing) {
-      if (body?.trim()) await sendMessage(userId, existing, body.trim());
+      if (body?.trim() || attachments.length) {
+        await sendMessage(userId, existing, body || "", attachments);
+      }
       const detail = await getConversation(userId, existing);
       if (!detail) throw new Error("Conversation not found");
       return detail;
@@ -454,11 +499,12 @@ export async function startConversation(
 
   const now = new Date().toISOString();
   const allIds = [userId, ...others];
+  let convId = "";
 
   if (isDemoMode()) {
-    const id = randomUUID();
+    convId = randomUUID();
     const conv: DemoConversation = {
-      id,
+      id: convId,
       subject: subject || null,
       createdById: userId,
       createdAt: now,
@@ -467,71 +513,42 @@ export async function startConversation(
       lastReadAt: Object.fromEntries(allIds.map((id) => [id, now])),
       messages: [],
     };
-    if (body?.trim()) {
-      conv.messages.push({
-        id: randomUUID(),
-        conversationId: id,
-        senderId: userId,
-        body: body.trim(),
-        createdAt: now,
-      });
-    }
     demoStore().unshift(conv);
+  } else {
+    const db = getSupabaseAdmin();
+    const { data: created, error } = await db
+      .from("conversations")
+      .insert({
+        subject: subject || null,
+        created_by_id: userId,
+        updated_at: now,
+      })
+      .select()
+      .single();
+    if (error || !created) throw new Error(error?.message || "Failed to create conversation");
 
+    convId = created.id as string;
+    await db.from("conversation_participants").insert(
+      allIds.map((uid) => ({
+        conversation_id: convId,
+        user_id: uid,
+        last_read_at: uid === userId ? now : null,
+      })),
+    );
+  }
+
+  if (body?.trim() || attachments.length) {
+    await sendMessage(userId, convId, body || "", attachments);
+  } else {
+    const sender = isDemoMode() ? contactFromDemo(userId) : await contactFromDb(userId);
     for (const uid of others) {
-      const contact = contactFromDemo(userId);
       await notifyUser({
         userId: uid,
         title: "New message",
-        body: body?.trim() || `${contact.fullName} started a conversation`,
-        link: `/messages?c=${id}`,
+        body: `${sender.fullName} started a conversation`,
+        link: `/messages?c=${convId}`,
       });
     }
-
-    const detail = await getConversation(userId, id);
-    if (!detail) throw new Error("Failed to create conversation");
-    return detail;
-  }
-
-  const db = getSupabaseAdmin();
-  const { data: created, error } = await db
-    .from("conversations")
-    .insert({
-      subject: subject || null,
-      created_by_id: userId,
-      updated_at: now,
-    })
-    .select()
-    .single();
-  if (error || !created) throw new Error(error?.message || "Failed to create conversation");
-
-  const convId = created.id as string;
-  await db.from("conversation_participants").insert(
-    allIds.map((uid) => ({
-      conversation_id: convId,
-      user_id: uid,
-      last_read_at: uid === userId ? now : null,
-    })),
-  );
-
-  if (body?.trim()) {
-    await db.from("messages").insert({
-      conversation_id: convId,
-      sender_id: userId,
-      body: body.trim(),
-    });
-  }
-
-  const sender = await contactFromDb(userId);
-  for (const uid of others) {
-    const { data: u } = await db.from("users").select("email").eq("id", uid).maybeSingle();
-    await notifyUser({
-      userId: uid,
-      title: "New message",
-      body: body?.trim() || `${sender.fullName} started a conversation`,
-      link: `/messages?c=${convId}`,
-      email: u?.email,
-    });
   }
 
   const detail = await getConversation(userId, convId);
@@ -543,9 +560,14 @@ export async function sendMessage(
   userId: string,
   conversationId: string,
   body: string,
+  attachments: MessageAttachmentInput[] = [],
 ): Promise<ChatMessage> {
   const text = body.trim();
-  if (!text) throw new Error("Message cannot be empty");
+  if (!text && attachments.length === 0) {
+    throw new Error("Message cannot be empty");
+  }
+
+  const preview = messagePreviewText({ body: text, attachments });
 
   if (isDemoMode()) {
     const c = demoStore().find(
@@ -559,6 +581,13 @@ export async function sendMessage(
       senderId: userId,
       body: text,
       createdAt: now,
+      attachments: attachments.map((a) => ({
+        id: randomUUID(),
+        name: a.name,
+        filePath: a.filePath,
+        mimeType: a.mimeType,
+        size: a.size,
+      })),
     };
     c.messages.push(msg);
     c.updatedAt = now;
@@ -569,7 +598,7 @@ export async function sendMessage(
       await notifyUser({
         userId: uid,
         title: `Message from ${sender.fullName}`,
-        body: text.slice(0, 120),
+        body: preview.slice(0, 120),
         link: `/messages?c=${conversationId}`,
       });
     }
@@ -597,6 +626,25 @@ export async function sendMessage(
     .single();
   if (error || !msg) throw new Error(error?.message || "Failed to send");
 
+  const messageId = msg.id as string;
+  let savedAttachments: MessageAttachment[] = [];
+  if (attachments.length) {
+    const { data: rows, error: attError } = await db
+      .from("message_attachments")
+      .insert(
+        attachments.map((a) => ({
+          message_id: messageId,
+          name: a.name,
+          file_path: a.filePath,
+          mime_type: a.mimeType,
+          size: a.size,
+        })),
+      )
+      .select();
+    if (attError) throw new Error(attError.message);
+    savedAttachments = toCamel<MessageAttachment[]>(rows || []);
+  }
+
   await db.from("conversations").update({ updated_at: now }).eq("id", conversationId);
   await db
     .from("conversation_participants")
@@ -617,7 +665,7 @@ export async function sendMessage(
     await notifyUser({
       userId: camel.userId,
       title: `Message from ${sender.fullName}`,
-      body: text.slice(0, 120),
+      body: preview.slice(0, 120),
       link: `/messages?c=${conversationId}`,
       email: u?.email,
     });
@@ -634,5 +682,6 @@ export async function sendMessage(
   return {
     ...mapped,
     sender: { id: sender.id, email: sender.email, fullName: sender.fullName },
+    attachments: savedAttachments,
   };
 }

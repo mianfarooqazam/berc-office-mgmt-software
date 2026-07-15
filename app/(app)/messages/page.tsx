@@ -2,7 +2,7 @@
 
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageSquare, Plus, Send } from "lucide-react";
+import { FileText, MessageSquare, Paperclip, Plus, Send, X } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,10 +10,18 @@ import { Select } from "@/components/ui/select";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { api } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
 import { cn, formatDateTime } from "@/lib/utils";
 
 type Contact = { id: string; email: string; fullName: string };
+
+type MessageAttachment = {
+  id: string;
+  name: string;
+  filePath: string;
+  mimeType?: string | null;
+  size?: number | null;
+};
 
 type ChatMessage = {
   id: string;
@@ -21,6 +29,7 @@ type ChatMessage = {
   createdAt: string;
   senderId: string;
   sender: { id: string; email: string; fullName: string };
+  attachments?: MessageAttachment[];
 };
 
 type Conversation = {
@@ -48,6 +57,17 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function formatBytes(size?: number | null) {
+  if (!size) return "";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isImage(mime?: string | null) {
+  return Boolean(mime?.startsWith("image/"));
+}
+
 function MessagesPageInner() {
   const searchParams = useSearchParams();
   const [meId, setMeId] = useState("");
@@ -56,11 +76,16 @@ function MessagesPageInner() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [active, setActive] = useState<Conversation | null>(null);
   const [draft, setDraft] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [composeOpen, setComposeOpen] = useState(false);
   const [recipientId, setRecipientId] = useState("");
   const [firstMessage, setFirstMessage] = useState("");
+  const [composeFiles, setComposeFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const composeFileRef = useRef<HTMLInputElement>(null);
 
   const loadList = useCallback(async () => {
     const [list, people, me] = await Promise.all([
@@ -100,18 +125,43 @@ function MessagesPageInner() {
 
   const messages = useMemo(() => active?.messages || [], [active]);
 
+  function addFiles(list: FileList | null, target: "chat" | "compose") {
+    if (!list?.length) return;
+    const next = Array.from(list).slice(0, 5);
+    if (target === "chat") setFiles((prev) => [...prev, ...next].slice(0, 5));
+    else setComposeFiles((prev) => [...prev, ...next].slice(0, 5));
+  }
+
   async function send(e: FormEvent) {
     e.preventDefault();
-    if (!activeId || !draft.trim()) return;
+    if (!activeId || (!draft.trim() && files.length === 0)) return;
     setSending(true);
+    setError("");
     try {
-      await api(`/api/v1/messages/${activeId}`, {
-        method: "POST",
-        json: { body: draft },
-      });
+      if (files.length) {
+        const fd = new FormData();
+        fd.set("body", draft);
+        for (const file of files) fd.append("files", file);
+        const res = await fetch(`/api/v1/messages/${activeId}`, {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new ApiError(data.error || "Failed to send", res.status);
+      } else {
+        await api(`/api/v1/messages/${activeId}`, {
+          method: "POST",
+          json: { body: draft },
+        });
+      }
       setDraft("");
+      setFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       await openConversation(activeId);
       await loadList();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to send message");
     } finally {
       setSending(false);
     }
@@ -121,18 +171,39 @@ function MessagesPageInner() {
     e.preventDefault();
     if (!recipientId) return;
     setSending(true);
+    setError("");
     try {
-      const created = await api<Conversation>("/api/v1/messages", {
-        method: "POST",
-        json: {
-          participantIds: [recipientId],
-          body: firstMessage.trim() || undefined,
-        },
-      });
+      let created: Conversation;
+      if (composeFiles.length) {
+        const fd = new FormData();
+        fd.append("participantIds", recipientId);
+        fd.set("body", firstMessage);
+        for (const file of composeFiles) fd.append("files", file);
+        const res = await fetch("/api/v1/messages", {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new ApiError(data.error || "Failed to start chat", res.status);
+        created = data as Conversation;
+      } else {
+        created = await api<Conversation>("/api/v1/messages", {
+          method: "POST",
+          json: {
+            participantIds: [recipientId],
+            body: firstMessage.trim() || undefined,
+          },
+        });
+      }
       setComposeOpen(false);
       setFirstMessage("");
+      setComposeFiles([]);
+      if (composeFileRef.current) composeFileRef.current.value = "";
       await loadList();
       await openConversation(created.id);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to start chat");
     } finally {
       setSending(false);
     }
@@ -142,7 +213,7 @@ function MessagesPageInner() {
     <div>
       <PageHeader
         title="Messages"
-        description="Direct text messages between team members."
+        description="Direct text messages and file attachments between team members."
         actions={
           <Button size="sm" onClick={() => setComposeOpen((v) => !v)}>
             <Plus className="mr-1.5 h-4 w-4" />
@@ -151,12 +222,18 @@ function MessagesPageInner() {
         }
       />
 
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-700 dark:text-red-300">
+          {error}
+        </div>
+      ) : null}
+
       {composeOpen ? (
         <Card className="mb-4">
           <CardHeader>
             <div>
               <CardTitle>New conversation</CardTitle>
-              <CardDescription>Start a direct message with a colleague</CardDescription>
+              <CardDescription>Start a direct message with optional attachments</CardDescription>
             </div>
           </CardHeader>
           <form onSubmit={startChat} className="space-y-3">
@@ -180,14 +257,47 @@ function MessagesPageInner() {
             <div>
               <label className="ui-label">Message</label>
               <Textarea
-                placeholder="Write your first message (optional)"
+                placeholder="Write your first message (optional if attaching files)"
                 value={firstMessage}
                 onChange={(e) => setFirstMessage(e.target.value)}
                 rows={3}
               />
             </div>
+            <div>
+              <label className="ui-label">Attachments</label>
+              <input
+                ref={composeFileRef}
+                type="file"
+                multiple
+                className="block w-full text-sm text-[var(--muted-fg)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--brand)]/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[var(--brand)]"
+                onChange={(e) => addFiles(e.target.files, "compose")}
+              />
+              {composeFiles.length ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {composeFiles.map((f, i) => (
+                    <span
+                      key={`${f.name}-${i}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-xs"
+                    >
+                      <Paperclip className="h-3 w-3" />
+                      {f.name}
+                      <button
+                        type="button"
+                        className="text-[var(--muted-fg)] hover:text-[var(--foreground)]"
+                        onClick={() => setComposeFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <div className="flex gap-2">
-              <Button type="submit" disabled={sending || !recipientId}>
+              <Button
+                type="submit"
+                disabled={sending || !recipientId || (!firstMessage.trim() && !composeFiles.length)}
+              >
                 Start chat
               </Button>
               <Button type="button" variant="ghost" onClick={() => setComposeOpen(false)}>
@@ -281,6 +391,7 @@ function MessagesPageInner() {
               <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5 md:px-6">
                 {messages.map((m) => {
                   const mine = m.senderId === meId;
+                  const attachments = m.attachments || [];
                   return (
                     <div
                       key={m.id}
@@ -299,7 +410,54 @@ function MessagesPageInner() {
                             {m.sender.fullName}
                           </p>
                         ) : null}
-                        <p className="whitespace-pre-wrap">{m.body}</p>
+                        {m.body ? <p className="whitespace-pre-wrap">{m.body}</p> : null}
+                        {attachments.length ? (
+                          <div className={cn("space-y-2", m.body ? "mt-2.5" : "")}>
+                            {attachments.map((a) =>
+                              isImage(a.mimeType) ? (
+                                <a
+                                  key={a.id}
+                                  href={`/api/v1/files/${a.filePath}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="block overflow-hidden rounded-xl border border-white/20"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={`/api/v1/files/${a.filePath}`}
+                                    alt={a.name}
+                                    className="max-h-56 w-full object-cover"
+                                  />
+                                  <span
+                                    className={cn(
+                                      "block px-2.5 py-1.5 text-[11px]",
+                                      mine ? "bg-black/10" : "bg-[var(--surface-2)]",
+                                    )}
+                                  >
+                                    {a.name}
+                                  </span>
+                                </a>
+                              ) : (
+                                <a
+                                  key={a.id}
+                                  href={`/api/v1/files/${a.filePath}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className={cn(
+                                    "flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition",
+                                    mine
+                                      ? "bg-black/10 hover:bg-black/15"
+                                      : "bg-[var(--surface-2)] hover:bg-[var(--muted)]",
+                                  )}
+                                >
+                                  <FileText className="h-4 w-4 shrink-0" />
+                                  <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                                  <span className="opacity-70">{formatBytes(a.size)}</span>
+                                </a>
+                              ),
+                            )}
+                          </div>
+                        ) : null}
                         <p
                           className={cn(
                             "mt-1.5 text-[10px] font-medium",
@@ -317,26 +475,74 @@ function MessagesPageInner() {
 
               <form
                 onSubmit={send}
-                className="flex items-end gap-2 border-t border-[var(--border)] bg-[var(--surface)] p-3 md:p-4"
+                className="border-t border-[var(--border)] bg-[var(--surface)] p-3 md:p-4"
               >
-                <Textarea
-                  placeholder="Type a message…"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  rows={2}
-                  className="min-h-[48px] flex-1 resize-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      if (draft.trim()) {
-                        void send(e as unknown as FormEvent);
+                {files.length ? (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {files.map((f, i) => (
+                      <span
+                        key={`${f.name}-${i}`}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-xs"
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        <span className="max-w-[160px] truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          className="text-[var(--muted-fg)] hover:text-[var(--foreground)]"
+                          onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="flex items-end gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      addFiles(e.target.files, "chat");
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-11 w-11 shrink-0 p-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Attach files"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <Textarea
+                    placeholder="Type a message or attach files…"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    rows={2}
+                    className="min-h-[48px] flex-1 resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (draft.trim() || files.length) {
+                          void send(e as unknown as FormEvent);
+                        }
                       }
-                    }
-                  }}
-                />
-                <Button type="submit" disabled={sending || !draft.trim()} className="h-11 w-11 shrink-0 p-0">
-                  <Send className="h-4 w-4" />
-                </Button>
+                    }}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={sending || (!draft.trim() && !files.length)}
+                    className="h-11 w-11 shrink-0 p-0"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="mt-2 text-[11px] text-[var(--muted-fg)]">
+                  Images, PDF, Word, Excel, or text · up to 5 files · 10MB each
+                </p>
               </form>
             </>
           )}

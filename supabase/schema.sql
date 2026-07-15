@@ -273,7 +273,17 @@ create table if not exists messages (
   id text primary key default gen_random_uuid()::text,
   conversation_id text not null references conversations(id) on delete cascade,
   sender_id text not null references users(id) on delete cascade,
-  body text not null,
+  body text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists message_attachments (
+  id text primary key default gen_random_uuid()::text,
+  message_id text not null references messages(id) on delete cascade,
+  name text not null,
+  file_path text not null,
+  mime_type text,
+  size int,
   created_at timestamptz not null default now()
 );
 
@@ -346,6 +356,7 @@ alter table notifications disable row level security;
 alter table conversations disable row level security;
 alter table conversation_participants disable row level security;
 alter table messages disable row level security;
+alter table message_attachments disable row level security;
 alter table holidays disable row level security;
 alter table office_events disable row level security;
 alter table integrations disable row level security;
