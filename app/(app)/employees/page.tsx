@@ -6,13 +6,11 @@ import { Plus, Search, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { api } from "@/lib/api-client";
 
-type Dept = { id: string; name: string };
 type Employee = {
   id: string;
   employeeId: string;
@@ -21,12 +19,10 @@ type Employee = {
   phone?: string | null;
   designation?: string | null;
   status: string;
-  department?: Dept | null;
 };
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [departments, setDepartments] = useState<Dept[]>([]);
   const [q, setQ] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -35,17 +31,11 @@ export default function EmployeesPage() {
     email: "",
     phone: "",
     designation: "",
-    departmentId: "",
     createLogin: true,
   });
 
   async function load() {
-    const [emps, deps] = await Promise.all([
-      api<Employee[]>(`/api/v1/employees?q=${encodeURIComponent(q)}`),
-      api<Dept[]>("/api/v1/departments"),
-    ]);
-    setEmployees(emps);
-    setDepartments(deps);
+    setEmployees(await api<Employee[]>(`/api/v1/employees?q=${encodeURIComponent(q)}`));
   }
 
   useEffect(() => {
@@ -61,10 +51,7 @@ export default function EmployeesPage() {
     e.preventDefault();
     await api("/api/v1/employees", {
       method: "POST",
-      json: {
-        ...form,
-        departmentId: form.departmentId || null,
-      },
+      json: form,
     });
     setShowForm(false);
     setForm({
@@ -73,7 +60,6 @@ export default function EmployeesPage() {
       email: "",
       phone: "",
       designation: "",
-      departmentId: "",
       createLogin: true,
     });
     await load();
@@ -83,7 +69,7 @@ export default function EmployeesPage() {
     <div>
       <PageHeader
         title="Employees"
-        description="Manage profiles, departments, and employment records."
+        description="Manage profiles and employment records."
         actions={
           <Button onClick={() => setShowForm((v) => !v)}>
             <Plus className="h-4 w-4" />
@@ -146,18 +132,8 @@ export default function EmployeesPage() {
               placeholder="Designation"
               value={form.designation}
               onChange={(e) => setForm({ ...form, designation: e.target.value })}
+              className="md:col-span-2"
             />
-            <Select
-              value={form.departmentId}
-              onChange={(e) => setForm({ ...form, departmentId: e.target.value })}
-            >
-              <option value="">No department</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </Select>
             <label className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-sm md:col-span-2">
               <input
                 type="checkbox"
@@ -191,7 +167,6 @@ export default function EmployeesPage() {
                 <tr>
                   <th>ID</th>
                   <th>Name</th>
-                  <th>Department</th>
                   <th>Designation</th>
                   <th>Status</th>
                 </tr>
@@ -221,7 +196,6 @@ export default function EmployeesPage() {
                         </div>
                       </div>
                     </td>
-                    <td>{e.department?.name || "—"}</td>
                     <td>{e.designation || "—"}</td>
                     <td>
                       <Badge tone={e.status === "ACTIVE" ? "success" : "neutral"}>{e.status}</Badge>

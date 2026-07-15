@@ -85,7 +85,7 @@ async function getRows(type: string) {
     case "employees": {
       const { data, error: dbError } = await db
         .from("employees")
-        .select("*, department:departments(*)")
+        .select("*")
         .order("full_name");
       if (dbError) throw new Error(dbError.message);
       const rows = toCamel<
@@ -93,18 +93,16 @@ async function getRows(type: string) {
           employeeId: string;
           fullName: string;
           email: string;
-          department?: { name?: string } | null;
           designation?: string | null;
           status: string;
         }[]
       >(data || []);
       return {
-        headers: ["Employee ID", "Name", "Email", "Department", "Designation", "Status"],
+        headers: ["Employee ID", "Name", "Email", "Designation", "Status"],
         data: rows.map((r) => [
           r.employeeId,
           r.fullName,
           r.email,
-          r.department?.name || "",
           r.designation || "",
           r.status,
         ]),
@@ -133,28 +131,6 @@ async function getRows(type: string) {
           r.category,
           r.assignedTo?.fullName || "",
           r.status,
-        ]),
-      };
-    }
-    case "departments": {
-      const { data, error: dbError } = await db
-        .from("departments")
-        .select("*, manager:employees!departments_manager_id_fkey(*), employees(count)")
-        .order("name");
-      if (dbError) throw new Error(dbError.message);
-      const rows = toCamel<
-        {
-          name: string;
-          manager?: { fullName?: string } | null;
-          employees?: { count: number }[];
-        }[]
-      >(data || []);
-      return {
-        headers: ["Name", "Manager", "Employees"],
-        data: rows.map((r) => [
-          r.name,
-          r.manager?.fullName || "",
-          String(r.employees?.[0]?.count ?? 0),
         ]),
       };
     }

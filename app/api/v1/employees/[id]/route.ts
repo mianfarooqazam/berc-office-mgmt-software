@@ -10,7 +10,6 @@ const updateSchema = z.object({
   address: z.string().optional().nullable(),
   emergencyContact: z.string().optional().nullable(),
   designation: z.string().optional().nullable(),
-  departmentId: z.string().optional().nullable(),
   joiningDate: z.string().optional().nullable(),
   status: z.string().optional(),
   bankDetails: z.string().optional().nullable(),
@@ -28,7 +27,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   const { data, error: dbError } = await db
     .from("employees")
     .select(
-      "*, department:departments(*), user:users(*, role:roles(*)), employee_docs:employee_documents(*), assets:assets!assets_assigned_to_id_fkey(*)",
+      "*, user:users(*, role:roles(*)), employee_docs:employee_documents(*), assets:assets!assets_assigned_to_id_fkey(*)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -66,7 +65,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     .from("employees")
     .update(update)
     .eq("id", id)
-    .select("*, department:departments(*)")
+    .select("*")
     .single();
 
   if (dbError) return error(dbError.message, 500);

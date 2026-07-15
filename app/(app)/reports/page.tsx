@@ -9,7 +9,6 @@ import {
   CheckSquare,
   Users,
   Laptop,
-  Building2,
   Video,
   HardDrive,
   Megaphone,
@@ -62,14 +61,8 @@ const CATEGORIES: { id: string; label: string; reports: ReportDef[] }[] = [
       {
         type: "employees",
         label: "Employee directory",
-        description: "Staff list with department, designation, and status",
+        description: "Staff list with designation and status",
         icon: Users,
-      },
-      {
-        type: "departments",
-        label: "Departments",
-        description: "Managers and headcount by department",
-        icon: Building2,
       },
     ],
   },

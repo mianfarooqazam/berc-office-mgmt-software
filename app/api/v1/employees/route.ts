@@ -14,7 +14,6 @@ const createSchema = z.object({
   address: z.string().optional(),
   emergencyContact: z.string().optional(),
   designation: z.string().optional(),
-  departmentId: z.string().optional().nullable(),
   joiningDate: z.string().optional().nullable(),
   status: z.string().optional(),
   bankDetails: z.string().optional(),
@@ -29,7 +28,6 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim();
-  const departmentId = searchParams.get("departmentId");
   const status = searchParams.get("status");
 
   if (isDemoMode()) {
@@ -41,7 +39,6 @@ export async function GET(req: Request) {
       phone: u.employee.phone,
       designation: u.employee.designation,
       status: u.employee.status,
-      department: { id: "demo-dept-1", name: "Operations" },
       user: { id: u.id, role: { name: u.roleName } },
     }));
     if (q) {
@@ -60,7 +57,7 @@ export async function GET(req: Request) {
   const db = getSupabaseAdmin();
   let query = db
     .from("employees")
-    .select("*, department:departments(*), user:users(*, role:roles(*))")
+    .select("*, user:users(*, role:roles(*))")
     .order("full_name");
 
   if (q) {
@@ -68,7 +65,6 @@ export async function GET(req: Request) {
       `full_name.ilike.%${q}%,email.ilike.%${q}%,employee_id.ilike.%${q}%,phone.ilike.%${q}%`,
     );
   }
-  if (departmentId) query = query.eq("department_id", departmentId);
   if (status) query = query.eq("status", status);
 
   const { data, error: dbError } = await query;
@@ -123,13 +119,12 @@ export async function POST(req: Request) {
       address: parsed.data.address ?? null,
       emergency_contact: parsed.data.emergencyContact ?? null,
       designation: parsed.data.designation ?? null,
-      department_id: parsed.data.departmentId || null,
       joining_date: parsed.data.joiningDate || null,
       status: parsed.data.status || "ACTIVE",
       bank_details: parsed.data.bankDetails ?? null,
       user_id: userId ?? null,
     })
-    .select("*, department:departments(*)")
+    .select("*")
     .single();
 
   if (dbError) return error(dbError.message, 500);

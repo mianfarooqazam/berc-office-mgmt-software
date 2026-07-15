@@ -14,7 +14,6 @@ const REPORT_META: Record<string, { title: string; category: string }> = {
   meetings: { title: "Meetings report", category: "work" },
   employees: { title: "Employee directory", category: "people" },
   assets: { title: "Assets inventory", category: "resources" },
-  departments: { title: "Departments report", category: "people" },
   announcements: { title: "Announcements archive", category: "work" },
   documents: { title: "Documents index", category: "resources" },
 };

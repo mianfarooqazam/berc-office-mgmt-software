@@ -24,7 +24,6 @@ export async function proxy(request: NextRequest) {
   const isApp =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/employees") ||
-    pathname.startsWith("/departments") ||
     pathname.startsWith("/tasks") ||
     pathname.startsWith("/meetings") ||
     pathname.startsWith("/assets") ||

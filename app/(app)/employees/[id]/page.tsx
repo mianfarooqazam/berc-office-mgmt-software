@@ -25,8 +25,6 @@ type Employee = {
   status: string;
   bankDetails?: string | null;
   profilePhoto?: string | null;
-  departmentId?: string | null;
-  department?: { id: string; name: string } | null;
   employeeDocs: { id: string; name: string; category?: string | null; filePath: string }[];
   assets: { id: string; assetId: string; name: string; status: string }[];
 };
@@ -35,16 +33,10 @@ export default function EmployeeProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [employee, setEmployee] = useState<Employee | null>(null);
-  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [editing, setEditing] = useState(false);
 
   async function load() {
-    const [emp, deps] = await Promise.all([
-      api<Employee>(`/api/v1/employees/${id}`),
-      api<{ id: string; name: string }[]>("/api/v1/departments"),
-    ]);
-    setEmployee(emp);
-    setDepartments(deps);
+    setEmployee(await api<Employee>(`/api/v1/employees/${id}`));
   }
 
   useEffect(() => {
@@ -64,7 +56,6 @@ export default function EmployeeProfilePage() {
         address: data.get("address"),
         emergencyContact: data.get("emergencyContact"),
         designation: data.get("designation"),
-        departmentId: data.get("departmentId") || null,
         status: data.get("status"),
         bankDetails: data.get("bankDetails"),
         joiningDate: data.get("joiningDate") || null,
@@ -142,10 +133,6 @@ export default function EmployeeProfilePage() {
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <p>
-              <span className="text-[var(--muted-fg)]">Department:</span>{" "}
-              {employee.department?.name || "—"}
-            </p>
-            <p>
               <span className="text-[var(--muted-fg)]">Designation:</span> {employee.designation || "—"}
             </p>
             <p>
@@ -163,14 +150,6 @@ export default function EmployeeProfilePage() {
               <Input name="designation" defaultValue={employee.designation || ""} placeholder="Designation" />
               <Input name="emergencyContact" defaultValue={employee.emergencyContact || ""} placeholder="Emergency contact" />
               <Input name="joiningDate" type="date" defaultValue={employee.joiningDate?.slice(0, 10) || ""} />
-              <Select name="departmentId" defaultValue={employee.departmentId || ""}>
-                <option value="">No department</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </Select>
               <Select name="status" defaultValue={employee.status}>
                 <option value="ACTIVE">ACTIVE</option>
                 <option value="INACTIVE">INACTIVE</option>

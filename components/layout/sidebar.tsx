@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  Building2,
   CheckSquare,
   Video,
   Laptop,
@@ -48,7 +47,6 @@ const NAV_GROUPS = [
     label: "People & resources",
     items: [
       { href: "/employees", label: "Employees", icon: Users },
-      { href: "/departments", label: "Departments", icon: Building2 },
       { href: "/assets", label: "Assets", icon: Laptop },
       { href: "/documents", label: "Documents", icon: FolderOpen },
     ],
