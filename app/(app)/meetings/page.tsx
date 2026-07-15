@@ -71,9 +71,14 @@ export default function MeetingsPage() {
         title="Meetings"
         description="Schedule with Google Meet or Microsoft Teams when integrations are connected."
         actions={
-          <Link href="/integrations">
-            <Button variant="secondary">Manage integrations</Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/meetings/minutes">
+              <Button variant="secondary">Meeting minutes</Button>
+            </Link>
+            <Link href="/integrations">
+              <Button variant="secondary">Manage integrations</Button>
+            </Link>
+          </div>
         }
       />
       <div className="grid gap-4 lg:grid-cols-3">

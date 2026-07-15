@@ -78,6 +78,7 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionCode | null> = {
   "/tasks": "tasks.read",
   "/reports": "reports.read",
   "/meetings": "meetings.read",
+  "/meetings/minutes": "meetings.read",
   "/announcements": "announcements.read",
   "/messages": "messages.read",
   "/calendar": "calendar.read",

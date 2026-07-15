@@ -190,6 +190,24 @@ create table if not exists action_items (
   created_at timestamptz not null default now()
 );
 
+create table if not exists meeting_minutes (
+  id text primary key default gen_random_uuid()::text,
+  meeting_id text references meetings(id) on delete set null,
+  title text not null,
+  meeting_date timestamptz,
+  attendees text,
+  discussion text not null default '',
+  decisions text,
+  action_summary text,
+  file_name text,
+  file_path text,
+  mime_type text,
+  file_size int,
+  author_id text not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists assets (
   id text primary key default gen_random_uuid()::text,
   asset_id text not null unique,
@@ -367,6 +385,7 @@ alter table meetings disable row level security;
 alter table meeting_participants disable row level security;
 alter table meeting_notes disable row level security;
 alter table action_items disable row level security;
+alter table meeting_minutes disable row level security;
 alter table assets disable row level security;
 alter table asset_maintenance disable row level security;
 alter table document_folders disable row level security;

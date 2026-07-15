@@ -10,6 +10,7 @@ import {
   Video,
   Laptop,
   FolderOpen,
+  FileText,
   Megaphone,
   MessageSquare,
   Calendar,
@@ -36,6 +37,7 @@ const NAV_GROUPS = [
     label: "Work",
     items: [
       { href: "/meetings", label: "Meetings", icon: Video },
+      { href: "/meetings/minutes", label: "Meeting Minutes", icon: FileText },
       { href: "/announcements", label: "Announcements", icon: Megaphone },
       { href: "/messages", label: "Messages", icon: MessageSquare },
       { href: "/calendar", label: "Calendar", icon: Calendar },
@@ -133,7 +135,11 @@ export function Sidebar({
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const active =
-                    pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    pathname === item.href ||
+                    (item.href === "/meetings"
+                      ? pathname.startsWith("/meetings/") &&
+                        !pathname.startsWith("/meetings/minutes")
+                      : pathname.startsWith(`${item.href}/`));
                   const Icon = item.icon;
                   return (
                     <Link

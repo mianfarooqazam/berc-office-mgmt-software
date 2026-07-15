@@ -25,7 +25,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   const { data, error: dbError } = await db
     .from("meetings")
     .select(
-      "*, participants:meeting_participants(*, employee:employees(*)), notes:meeting_notes(*, author:users(*, employee:employees(*))), action_items:action_items(*, assignee:employees(*))",
+      "*, participants:meeting_participants(*, employee:employees(*)), notes:meeting_notes(*, author:users(*, employee:employees(*))), action_items:action_items(*, assignee:employees(*)), minutes:meeting_minutes(*, author:users(*, employee:employees(*)))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -36,6 +36,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   const meeting = toCamel<{
     notes?: { createdAt?: string }[];
     actionItems?: { createdAt?: string }[];
+    minutes?: { createdAt?: string; meetingDate?: string | null }[];
   }>(data);
   if (Array.isArray(meeting.notes)) {
     meeting.notes.sort((a, b) =>
@@ -45,6 +46,13 @@ export async function GET(_req: Request, ctx: Ctx) {
   if (Array.isArray(meeting.actionItems)) {
     meeting.actionItems.sort((a, b) =>
       String(b.createdAt || "").localeCompare(String(a.createdAt || "")),
+    );
+  }
+  if (Array.isArray(meeting.minutes)) {
+    meeting.minutes.sort((a, b) =>
+      String(b.meetingDate || b.createdAt || "").localeCompare(
+        String(a.meetingDate || a.createdAt || ""),
+      ),
     );
   }
   return json(meeting);
